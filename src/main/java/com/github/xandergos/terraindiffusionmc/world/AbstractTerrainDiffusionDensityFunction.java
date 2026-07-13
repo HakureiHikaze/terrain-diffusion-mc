@@ -3,22 +3,25 @@ package com.github.xandergos.terraindiffusionmc.world;
 import com.github.xandergos.terraindiffusionmc.config.TerrainDiffusionConfig;
 import com.github.xandergos.terraindiffusionmc.pipeline.LocalTerrainProvider;
 import com.github.xandergos.terraindiffusionmc.pipeline.LocalTerrainProvider.HeightmapData;
-import com.mojang.serialization.MapCodec;
-import net.minecraft.util.dynamic.CodecHolder;
-import net.minecraft.world.gen.densityfunction.DensityFunction;
+import net.minecraft.world.level.levelgen.DensityFunction;
 
-public class TerrainDiffusionDensityFunction implements DensityFunction {
-    public static final MapCodec<TerrainDiffusionDensityFunction> CODEC =
-            MapCodec.unit(TerrainDiffusionDensityFunction::new);
-
-    public static final CodecHolder<TerrainDiffusionDensityFunction> CODEC_HOLDER = CodecHolder.of(CODEC);
+/**
+ * Shared logic for the terrain-diffusion density function.
+ *
+ * <p>Everything that is identical across the supported Minecraft drops lives here. The value-range
+ * declaration is the one part of {@link DensityFunction} that changed - 26.1
+ * and 26.2 expose {@code minValue()}/{@code maxValue()}, while 26.3 replaced them with a single
+ * {@code range()} returning {@code net.minecraft.util.Interval}. That method, plus the codec plumbing, is supplied by the tiny version-specific
+ * {@code TerrainDiffusionDensityFunction} subclass selected by the build.
+ */
+public abstract class AbstractTerrainDiffusionDensityFunction implements DensityFunction {
+    /** Lowest density this function can report (blocks below the target height). */
+    public static final double MIN_DENSITY = -64;
+    /** Highest density this function can report (blocks above the target height). */
+    public static final double MAX_DENSITY = 1024;
 
     @Override
-    public double sample(DensityFunction.NoisePos pos) {
-        return compute(pos);
-    }
-
-    public double compute(DensityFunction.NoisePos context) {
+    public double compute(DensityFunction.FunctionContext context) {
         int x = context.blockX();
         int z = context.blockZ();
         int y = context.blockY();
@@ -73,18 +76,18 @@ public class TerrainDiffusionDensityFunction implements DensityFunction {
     }
 
     @Override
-    public void fill(double[] densities, DensityFunction.EachApplier applier) {
+    public void fillArray(double[] densities, DensityFunction.ContextProvider contextProvider) {
         if (densities.length == 0) return;
 
         FillContext ctx = new FillContext();
-        DensityFunction.NoisePos pos = applier.at(0);
+        DensityFunction.FunctionContext pos = contextProvider.forIndex(0);
         int x = pos.blockX();
         int z = pos.blockZ();
         int y = pos.blockY();
         ctx.init(x, z);
 
         for (int i = 0; i < densities.length; i++) {
-            pos = applier.at(i);
+            pos = contextProvider.forIndex(i);
             x = pos.blockX();
             z = pos.blockZ();
             y = pos.blockY();
@@ -105,23 +108,11 @@ public class TerrainDiffusionDensityFunction implements DensityFunction {
         }
     }
 
-    @Override
-    public DensityFunction apply(DensityFunction.DensityFunctionVisitor visitor) {
+    public DensityFunction mapAll(DensityFunction.Visitor visitor) {
         return visitor.apply(this);
     }
 
-    @Override
-    public double minValue() {
-        return -64;
-    }
-
-    @Override
-    public double maxValue() {
-        return 1024;
-    }
-
-    @Override
-    public CodecHolder<? extends DensityFunction> getCodecHolder() {
-        return CODEC_HOLDER;
+    public DensityFunction mapChildren(DensityFunction.Visitor visitor) {
+        return this;
     }
 }

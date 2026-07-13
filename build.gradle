@@ -1,11 +1,22 @@
 plugins {
-    id 'fabric-loom' version '1.13-SNAPSHOT'
+    id 'net.fabricmc.fabric-loom' version '1.17.14'
     id 'maven-publish'
 }
 
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import java.security.MessageDigest
+
+// Minecraft target selection (26.1 / 26.2 / 26.3), chosen via -PmcTarget=26x.
+def mcTarget = (project.findProperty('mcTarget') ?: '261').toString()
+if (!(mcTarget in ['261', '262', '263'])) {
+    throw new GradleException("Unknown -PmcTarget=${mcTarget}; expected one of 261, 262, 263")
+}
+def minecraftVersion = project.property("mc${mcTarget}_minecraft").toString()
+def fabricVersion = project.property("mc${mcTarget}_fabric").toString()
+ext.minecraft_version = minecraftVersion
+ext.fabric_version = fabricVersion
+println "Minecraft target: ${mcTarget} -> minecraft ${minecraftVersion}, fabric-api ${fabricVersion}"
 
 def useCuda = project.hasProperty('useCuda') && project.property('useCuda').toString().toLowerCase() == 'true'
 def useDml = project.hasProperty('useDml') && project.property('useDml').toString().toLowerCase() == 'true'
@@ -24,12 +35,16 @@ def generatedManifestDirectory = layout.buildDirectory.dir('generated/model-asse
 def generatedManifestFile = new File(generatedManifestDirectory, 'model-assets-manifest.json')
 
 def buildVariant = useCuda ? 'cuda' : useDml ? 'windows' : 'cpu'
-version = "${project.mod_version}-${buildVariant}+${project.minecraft_version}"
+version = "${project.mod_version}-${buildVariant}+${minecraftVersion}"
 group = project.maven_group
 
 base {
     archivesName = project.archives_base_name
 }
+
+// The DensityFunction value-range API diverges across 26.1,26.2 and 26.3)
+def densityFunctionVariantDir = (mcTarget == '263') ? 'src/mc_263/java' : 'src/mc_legacy/java'
+sourceSets.main.java.srcDir densityFunctionVariantDir
 
 loom {
     splitEnvironmentSourceSets()
@@ -64,12 +79,12 @@ repositories {
 }
 
 dependencies {
-    // To change the versions see the gradle.properties file
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    // To change the versions see the gradle.properties file.
+    // Minecraft 26.1+ is unobfuscated, so no mappings
+    minecraft "com.mojang:minecraft:${minecraftVersion}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${fabricVersion}"
 
     if (useCuda) {
         implementation "com.microsoft.onnxruntime:onnxruntime_gpu:1.20.0"
@@ -86,7 +101,8 @@ dependencies {
 processResources {
     dependsOn 'generateModelAssetManifest'
     inputs.property "version", project.version
-    inputs.property "minecraft_version", project.minecraft_version
+    inputs.property "minecraft_version", minecraftVersion
+    inputs.property "minecraft_dependency", project.minecraft_dependency
     inputs.property "loader_version", project.loader_version
     inputs.property "build_variant", buildVariant
     filteringCharset "UTF-8"
@@ -96,7 +112,8 @@ processResources {
 
     filesMatching("fabric.mod.json") {
         expand "version": project.version,
-                "minecraft_version": project.minecraft_version,
+                "minecraft_version": minecraftVersion,
+                "minecraft_dependency": project.minecraft_dependency,
                 "loader_version": project.loader_version
     }
     filesMatching("build-variant.properties") {
@@ -104,7 +121,7 @@ processResources {
     }
 }
 
-def targetJavaVersion = 21
+def targetJavaVersion = 25
 tasks.withType(JavaCompile).configureEach {
     // ensure that the encoding is set to UTF-8, no matter what the system default is
     // this fixes some edge cases with special characters not displaying correctly
@@ -230,6 +247,17 @@ def gradlewExecutable = rootProject.file(isWindows ? 'gradlew.bat' : 'gradlew').
 
 tasks.register('buildAll') {
     dependsOn 'buildCuda', 'buildDml', 'buildCpu'
+}
+
+['261', '262', '263'].each { target ->
+    tasks.register("buildMc${target}", Exec) {
+        workingDir rootProject.projectDir
+        commandLine gradlewExecutable, 'build', "-PmcTarget=${target}"
+    }
+}
+
+tasks.register('buildAllMc') {
+    dependsOn 'buildMc261', 'buildMc262', 'buildMc263'
 }
 
 String sha256Hex(byte[] fileBytes) {

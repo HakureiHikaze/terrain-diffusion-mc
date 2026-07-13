@@ -20,6 +20,16 @@ Three builds are available on the [Releases](https://github.com/xandergos/terrai
 
 Use the `-cuda` build only if you are on Linux, or have an NVIDIA GPU and prefer CUDA (may improve performance).
 
+## Supported Minecraft versions
+
+This mod targets Minecraft **26.x**:
+**26.1**, **26.2**, and **26.3**. A single jar declares compatibility with the whole `>=26.1`
+range, and the build can produce a jar against any specific target with
+`./gradlew build -PmcTarget=261|262|263` (or `./gradlew buildAllMc` for all three).
+Minecraft 26.x requires **Java 25**.
+
+> For Minecraft 1.20.1 / 1.21.1 / 1.21.11 (the last obfuscated releases) use the older 2.x builds.
+
 ## Requirements
 
 - Minecraft with [Fabric](https://fabricmc.net/) and the [Fabric API Mod](https://modrinth.com/mod/fabric-api) installed
@@ -91,7 +101,7 @@ This value is saved with the world save and affects:
 
 **A dynamic link library (DLL) initialization routine failed**
 
-This can happen for some older Java versions. Please update to the most recent version of Java 21 or higher. The [latest Microsoft OpenJDK 21](https://learn.microsoft.com/en-us/java/openjdk/download) version is known to work.
+This can happen for some older Java versions. Minecraft 26.x requires Java 25 or higher. The [latest Microsoft OpenJDK 25](https://learn.microsoft.com/en-us/java/openjdk/download) version is known to work.
 
 **LoadLibrary failed with error 126** *(CUDA build only)*
 
