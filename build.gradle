@@ -6,16 +6,24 @@ plugins {
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import java.security.MessageDigest
+import com.github.xandergos.terraindiffusionmc.buildlogic.BuildVariantResolver
 
 def useCuda = project.hasProperty('useCuda') && project.property('useCuda').toString().toLowerCase() == 'true'
 def useDml = project.hasProperty('useDml') && project.property('useDml').toString().toLowerCase() == 'true'
 def useCpu = project.hasProperty('useCpu') && project.property('useCpu').toString().toLowerCase() == 'true'
 def withSourcesJar = project.hasProperty('withSourcesJar') && project.property('withSourcesJar').toString().toLowerCase() == 'true'
-
-if ([useCuda, useDml, useCpu].count { it } > 1) {
-    throw new GradleException("Only one of -PuseCuda, -PuseDml, or -PuseCpu may be specified at a time.")
+// targetOs is an internal TestKit override; production builds use the host operating system.
+def hostOs = BuildVariantResolver.operatingSystem(System.getProperty('os.name'))
+def hostIsWindows = hostOs == BuildVariantResolver.OperatingSystem.WINDOWS
+def selection
+try {
+    selection = BuildVariantResolver.resolve(hostOs, useCuda, useDml, useCpu)
+} catch (IllegalArgumentException exception) {
+    throw new GradleException("${exception.message} On ${System.getProperty('os.name')} use ./gradlew build (CPU) or -PuseCuda=true.", exception)
 }
-if (!useDml && !useCpu && !useCuda) useDml = true
+useCuda = selection.variant() == BuildVariantResolver.Variant.CUDA
+useDml = selection.variant() == BuildVariantResolver.Variant.DML
+useCpu = selection.variant() == BuildVariantResolver.Variant.CPU
 
 println "Build variant: ${useCuda ? 'CUDA' : useDml ? 'DirectML (Windows)' : 'CPU'}"
 def modelRepositorySlug = 'xandergos/terrain-diffusion-30m-onnx'
@@ -24,6 +32,7 @@ def generatedManifestDirectory = layout.buildDirectory.dir('generated/model-asse
 def generatedManifestFile = new File(generatedManifestDirectory, 'model-assets-manifest.json')
 
 def buildVariant = useCuda ? 'cuda' : useDml ? 'windows' : 'cpu'
+def defaultInferenceDevice = useCpu ? 'auto' : 'gpu'
 version = "${project.mod_version}-${buildVariant}+${project.minecraft_version}"
 group = project.maven_group
 
@@ -81,6 +90,12 @@ dependencies {
         implementation 'com.microsoft.onnxruntime:onnxruntime-dml:1.0'
         include 'com.microsoft.onnxruntime:onnxruntime-dml:1.0'
     }
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
 }
 
 processResources {
@@ -101,6 +116,9 @@ processResources {
     }
     filesMatching("build-variant.properties") {
         expand "build_variant": buildVariant
+    }
+    filesMatching("terrain-diffusion-mc.properties") {
+        expand "default_inference_device": defaultInferenceDevice
     }
 }
 
@@ -218,18 +236,25 @@ tasks.register('generateModelAssetManifest') {
     }
 }
 
-def isWindows = System.getProperty('os.name').toLowerCase().startsWith('windows')
-def gradlewExecutable = rootProject.file(isWindows ? 'gradlew.bat' : 'gradlew').absolutePath
-
-['Cuda', 'Dml', 'Cpu'].each { variant ->
-    tasks.register("build${variant}", Exec) {
-        workingDir rootProject.projectDir
-        commandLine gradlewExecutable, 'build', "-Puse${variant}=true"
+['Cuda', 'Cpu'].each { variant ->
+    tasks.register("build${variant}", GradleBuild) {
+        group = 'build'
+        description = "Builds the ${variant} artifact; packaging does not run Minecraft."
+        tasks = ['build']
+        startParameter.projectProperties = ["use${variant}": 'true']
     }
 }
-
+tasks.register('buildDml', GradleBuild) {
+    group = 'build'
+    description = 'Builds the Windows-only DirectML artifact (must be run on Windows).'
+    tasks = ['build']
+    startParameter.projectProperties = [useDml: 'true']
+}
 tasks.register('buildAll') {
-    dependsOn 'buildCuda', 'buildDml', 'buildCpu'
+    group = 'build'
+    description = 'Builds all artifacts runnable on this host (CPU and CUDA on Linux/macOS; also DirectML on Windows).'
+    dependsOn 'buildCpu', 'buildCuda'
+    if (hostIsWindows) dependsOn 'buildDml'
 }
 
 String sha256Hex(byte[] fileBytes) {

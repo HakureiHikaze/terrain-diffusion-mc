@@ -1,6 +1,7 @@
 package com.github.xandergos.terraindiffusionmc.config;
 
 import net.fabricmc.loader.api.FabricLoader;
+import com.github.xandergos.terraindiffusionmc.pipeline.InferenceProviderSelector;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,15 +30,27 @@ public final class TerrainDiffusionConfig {
     private TerrainDiffusionConfig() {
     }
 
-    /** Inference device: "cpu", "gpu", or "auto" (try GPU then fall back to CPU). */
+    /** Inference device: "cpu", "gpu", or "auto". */
     public static String inferenceDevice() {
-        String device = readString("inference.device", "gpu");
-        // On the CPU build "gpu" is meaningless (no dedicated GPU provider), so treat it as "auto":
-        // tries CoreML on macOS, falls back to CPU elsewhere.
-        if ("cpu".equals(BUILD_VARIANT)) {
-            return "auto";
+        String defaultDevice;
+        try {
+            defaultDevice = InferenceProviderSelector.defaultDevice(
+                    InferenceProviderSelector.buildVariant(BUILD_VARIANT));
+        } catch (IllegalArgumentException ignored) {
+            defaultDevice = "auto";
+        }
+        String device = readString("inference.device", defaultDevice);
+        if (!"cpu".equals(device) && !"gpu".equals(device) && !"auto".equals(device)) {
+            System.err.println("Invalid inference.device='" + device + "'; using " + defaultDevice +
+                    ". Valid values are cpu, gpu, and auto.");
+            return defaultDevice;
         }
         return device;
+    }
+
+    /** Embedded artifact variant: windows (DirectML), cuda, or cpu. */
+    public static String buildVariant() {
+        return BUILD_VARIANT;
     }
 
     /** Whether to offload inactive models from VRAM between pipeline stages. */
@@ -87,7 +100,7 @@ public final class TerrainDiffusionConfig {
         }
 
         if (!loadedFromResource) {
-            PROPERTIES.setProperty("inference.device", "gpu");
+            PROPERTIES.setProperty("inference.device", "auto");
             PROPERTIES.setProperty("validate_model", String.valueOf(DEFAULT_VALIDATE_MODEL));
             PROPERTIES.setProperty("tile_size", String.valueOf(DEFAULT_TILE_SIZE));
         }

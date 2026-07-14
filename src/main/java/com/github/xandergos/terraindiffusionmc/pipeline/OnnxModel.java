@@ -33,21 +33,18 @@ public final class OnnxModel implements AutoCloseable {
 
     private static volatile String resolvedInferenceProvider = null;
     private static final AtomicBoolean providerLoggedOnce = new AtomicBoolean(false);
-    private static final AtomicBoolean coremlWarnLoggedOnce = new AtomicBoolean(false);
-    private static final AtomicBoolean cudaWarnLoggedOnce = new AtomicBoolean(false);
-    private static final AtomicBoolean dmlWarnLoggedOnce = new AtomicBoolean(false);
-    private static final AtomicBoolean noGpuWarnLoggedOnce = new AtomicBoolean(false);
-
-    // GPU slot: when offload_models=true, only one session is alive at a time.
-    private static final Object GPU_SLOT_LOCK = new Object();
-    private static OnnxModel gpuSlotHolder = null;
-    private static OrtSession activeGpuSession = null;
+    // Accelerator slot: when offload_models=true, only one accelerated session is alive at a time.
+    private static final Object ACCELERATOR_SLOT_LOCK = new Object();
+    private static OnnxModel acceleratorSlotHolder = null;
+    private static OrtSession activeAcceleratorSession = null;
 
     private final OrtEnvironment env;
     private final byte[] optimizedModelBytes;
     private final String name;
-    private OrtSession cpuSession;    // non-null in CPU-only mode
-    private OrtSession gpuSession;    // non-null when offload_models=false
+    private OrtSession cpuSession;
+    private OrtSession acceleratorSession;
+    private InferenceProviderSelector.Provider selectedProvider;
+    private boolean fallbackToCpu;
 
     private static final class OptimizedModelLoadResult {
         private final byte[] modelBytes;
@@ -106,10 +103,14 @@ public final class OnnxModel implements AutoCloseable {
             Path temporaryOptimizedModelPath = optimizedModelPath.resolveSibling(optimizedModelPath.getFileName() + ".tmp");
             Files.deleteIfExists(temporaryOptimizedModelPath);
             OrtSession.SessionOptions optimizationOptions = new OrtSession.SessionOptions();
-            optimizationOptions.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.EXTENDED_OPT);
-            optimizationOptions.setOptimizedModelFilePath(temporaryOptimizedModelPath.toAbsolutePath().toString());
-            try (OrtSession ignored = env.createSession(sourceModelBytes, optimizationOptions)) {
-                // Session creation materializes the optimized model on disk.
+            try {
+                optimizationOptions.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.EXTENDED_OPT);
+                optimizationOptions.setOptimizedModelFilePath(temporaryOptimizedModelPath.toAbsolutePath().toString());
+                try (OrtSession ignored = env.createSession(sourceModelBytes, optimizationOptions)) {
+                    // Session creation materializes the optimized model on disk.
+                }
+            } finally {
+                optimizationOptions.close();
             }
             byte[] optimizedModelBytesFromDisk = Files.readAllBytes(temporaryOptimizedModelPath);
             Files.move(
@@ -139,7 +140,7 @@ public final class OnnxModel implements AutoCloseable {
             resolvedInferenceProvider = provider;
         }
         if (providerLoggedOnce.compareAndSet(false, true)) {
-            LOG.info("Terrain diffusion inference: {}", provider);
+            LOG.info("Terrain diffusion inference: provider={}", provider);
         }
     }
 
@@ -147,35 +148,72 @@ public final class OnnxModel implements AutoCloseable {
      * Loads model sessions for the active inference device configuration.
      */
     private void initializeModelSession(byte[] modelBytes, long startMillis) throws OrtException {
-        if ("cpu".equals(TerrainDiffusionConfig.inferenceDevice())) {
-            OrtSession.SessionOptions sessionOptions = new OrtSession.SessionOptions();
-            sessionOptions.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
-            this.cpuSession = env.createSession(modelBytes, sessionOptions);
-            this.gpuSession = null;
-            setResolvedProviderOnce("CPU");
-            LOG.info("ONNX model '{}' loaded on CPU ({} KB) in {} ms",
-                    name, modelBytes.length / 1024, System.currentTimeMillis() - startMillis);
+        InferenceProviderSelector.BuildVariant buildVariant = InferenceProviderSelector.buildVariant(
+                TerrainDiffusionConfig.buildVariant());
+        InferenceProviderSelector.OperatingSystem os = InferenceProviderSelector.operatingSystem(System.getProperty("os.name"));
+        String requestedDevice = TerrainDiffusionConfig.inferenceDevice();
+        InferenceProviderSelector.Decision decision = InferenceProviderSelector.resolve(buildVariant, os, requestedDevice);
+        LOG.info("Terrain diffusion inference: os={}, buildVariant={}, requested={}, selected={}",
+                os, buildVariant, requestedDevice, decision.preferredProvider());
+
+        if (!decision.usesAccelerator()) {
+            createCpuSession(modelBytes, startMillis);
             return;
         }
-        if (!TerrainDiffusionConfig.offloadModels()) {
-            OrtSession.SessionOptions sessionOptions = new OrtSession.SessionOptions();
-            sessionOptions.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
-            addGpuProvider(sessionOptions);
-            if ("CoreML".equals(resolvedInferenceProvider)) {
-                throw new OrtException(
-                        "inference.offload_models=false is not supported with CoreML. " +
-                        "Set inference.offload_models=true in terrain-diffusion-mc.properties.");
+        fallbackToCpu = !decision.acceleratorRequired();
+        try {
+            if (decision.preferredProvider() == InferenceProviderSelector.Provider.COREML && !TerrainDiffusionConfig.offloadModels()) {
+                throw new OrtException("inference.offload_models=false is not supported with CoreML. Set it to true.");
             }
-            this.gpuSession = env.createSession(modelBytes, sessionOptions);
-            this.cpuSession = null;
-            LOG.info("ONNX model '{}' loaded on GPU ({} KB) in {} ms",
-                    name, modelBytes.length / 1024, System.currentTimeMillis() - startMillis);
-            return;
+            if (TerrainDiffusionConfig.offloadModels()) {
+                // Verify the native provider now so auto can fall back before any world generation.
+                try (OrtSession probe = createAcceleratedSession(modelBytes, decision.preferredProvider())) {
+                    // The real session is created on demand and remains subject to slot offloading.
+                }
+                selectedProvider = decision.preferredProvider();
+                cpuSession = null;
+                acceleratorSession = null;
+                setResolvedProviderOnce(selectedProvider.name());
+                LOG.info("ONNX model '{}' bytes cached for {} offloading ({} KB) in {} ms", name,
+                        selectedProvider, modelBytes.length / 1024, System.currentTimeMillis() - startMillis);
+            } else {
+                acceleratorSession = createAcceleratedSession(modelBytes, decision.preferredProvider());
+                selectedProvider = decision.preferredProvider();
+                setResolvedProviderOnce(selectedProvider.name());
+                LOG.info("ONNX model '{}' loaded with {} ({} KB) in {} ms", name, selectedProvider,
+                        modelBytes.length / 1024, System.currentTimeMillis() - startMillis);
+            }
+        } catch (OrtException | UnsatisfiedLinkError | NoClassDefFoundError providerFailure) {
+            if (decision.acceleratorRequired()) throw requiredProviderFailure(decision.preferredProvider(), providerFailure);
+            LOG.warn("{} provider unavailable for auto mode; using CPU: {}", decision.preferredProvider(), providerFailure.getMessage());
+            createCpuSession(modelBytes, startMillis);
         }
-        this.cpuSession = null;
-        this.gpuSession = null;
-        LOG.info("ONNX model '{}' bytes cached in CPU RAM ({} KB) in {} ms",
-                name, modelBytes.length / 1024, System.currentTimeMillis() - startMillis);
+    }
+
+    private void createCpuSession(byte[] modelBytes, long startMillis) throws OrtException {
+        OrtSession.SessionOptions options = new OrtSession.SessionOptions();
+        try {
+            options.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
+            cpuSession = env.createSession(modelBytes, options);
+        } finally {
+            options.close();
+        }
+        acceleratorSession = null;
+        selectedProvider = InferenceProviderSelector.Provider.CPU;
+        setResolvedProviderOnce("CPU");
+        LOG.info("ONNX model '{}' loaded on CPU ({} KB) in {} ms", name, modelBytes.length / 1024,
+                System.currentTimeMillis() - startMillis);
+    }
+
+    private static OrtException requiredProviderFailure(InferenceProviderSelector.Provider provider, Throwable cause) {
+        String platform = System.getProperty("os.name");
+        String details = provider == InferenceProviderSelector.Provider.CUDA
+                ? " The CUDA artifact was loaded, but CUDA and cuDNN native libraries/shared libraries could not be loaded. " +
+                "Install the required CUDA dependencies or use the CPU artifact. On Linux see CUDA_INSTALL.md; check LD_LIBRARY_PATH and .so libraries."
+                : " The required " + provider + " provider could not be loaded. Use the matching artifact or set inference.device=cpu.";
+        OrtException failure = new OrtException("inference.device=gpu requires " + provider + " on " + platform + "." + details + " Cause: " + cause.getMessage());
+        failure.initCause(cause);
+        return failure;
     }
 
     private void closeLoadedSessions() {
@@ -183,9 +221,9 @@ public final class OnnxModel implements AutoCloseable {
             try { cpuSession.close(); } catch (OrtException ignored) {}
             cpuSession = null;
         }
-        if (gpuSession != null) {
-            try { gpuSession.close(); } catch (OrtException ignored) {}
-            gpuSession = null;
+        if (acceleratorSession != null) {
+            try { acceleratorSession.close(); } catch (OrtException ignored) {}
+            acceleratorSession = null;
         }
     }
 
@@ -245,12 +283,12 @@ public final class OnnxModel implements AutoCloseable {
         if (cpuSession != null) {
             return runWithSession(cpuSession, inputs);
         }
-        if (gpuSession != null) {
-            return runWithSession(gpuSession, inputs);
+        if (acceleratorSession != null) {
+            return runWithSession(acceleratorSession, inputs);
         }
-        synchronized (GPU_SLOT_LOCK) {
-            claimGpuSlot();
-            return runWithSession(activeGpuSession, inputs);
+        synchronized (ACCELERATOR_SLOT_LOCK) {
+            claimAcceleratorSlot();
+            return runWithSession(activeAcceleratorSession, inputs);
         }
     }
 
@@ -268,93 +306,70 @@ public final class OnnxModel implements AutoCloseable {
     }
 
     /**
-     * Evicts the current GPU session if this model doesn't hold the slot,
-     * then creates a fresh GPU session from CPU-cached weights.
-     * Must be called under GPU_SLOT_LOCK.
+     * Evicts the current accelerated session if this model doesn't hold the slot,
+     * then creates a fresh accelerated session from CPU-cached weights.
+     * Must be called under ACCELERATOR_SLOT_LOCK.
      */
-    private void claimGpuSlot() {
-        if (gpuSlotHolder == this) return;
+    private void claimAcceleratorSlot() {
+        if (acceleratorSlotHolder == this) return;
 
-        if (activeGpuSession != null) {
-            LOG.debug("Evicting '{}' from GPU, loading '{}'",
-                    gpuSlotHolder != null ? gpuSlotHolder.name : "?", name);
-            try { activeGpuSession.close(); } catch (OrtException ignored) {}
-            activeGpuSession = null;
-            gpuSlotHolder = null;
+        if (activeAcceleratorSession != null) {
+            LOG.debug("Evicting '{}' from {}, loading '{}'", acceleratorSlotHolder != null ? acceleratorSlotHolder.name : "?",
+                    acceleratorSlotHolder != null ? acceleratorSlotHolder.selectedProvider : "accelerator", name);
+            try { activeAcceleratorSession.close(); } catch (OrtException ignored) {}
+            activeAcceleratorSession = null;
+            acceleratorSlotHolder = null;
         }
 
         try {
-            OrtSession.SessionOptions opts = new OrtSession.SessionOptions();
-            opts.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
-            addGpuProvider(opts);
-            activeGpuSession = env.createSession(optimizedModelBytes, opts);
-            gpuSlotHolder = this;
-            LOG.debug("GPU session ready for '{}'", name);
-        } catch (OrtException e) {
-            throw new RuntimeException("Failed to create GPU session for: " + name, e);
+            activeAcceleratorSession = createAcceleratedSession(optimizedModelBytes, selectedProvider);
+            acceleratorSlotHolder = this;
+            LOG.debug("{} session ready for '{}'", selectedProvider, name);
+        } catch (OrtException | UnsatisfiedLinkError | NoClassDefFoundError e) {
+            if (fallbackToCpu) {
+                LOG.warn("{} provider became unavailable in auto mode; switching '{}' to CPU: {}",
+                        selectedProvider, name, e.getMessage());
+                try {
+                    createCpuSession(optimizedModelBytes, System.currentTimeMillis());
+                } catch (OrtException cpuFailure) {
+                    throw new RuntimeException("Failed to create CPU fallback session for: " + name, cpuFailure);
+                }
+                return;
+            }
+            throw new RuntimeException("Failed to create " + selectedProvider + " session for: " + name, e);
         }
     }
 
-    private static void addGpuProvider(OrtSession.SessionOptions opts) throws OrtException {
-        boolean gpuRequired = "gpu".equals(TerrainDiffusionConfig.inferenceDevice());
-        boolean added = false;
-
+    private OrtSession createAcceleratedSession(byte[] modelBytes, InferenceProviderSelector.Provider provider) throws OrtException {
+        OrtSession.SessionOptions options = new OrtSession.SessionOptions();
         try {
-            OrtCUDAProviderOptions cudaOpts = new OrtCUDAProviderOptions(0);
+            options.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
+            addProvider(options, provider);
+            return env.createSession(modelBytes, options);
+        } finally {
+            options.close();
+        }
+    }
+
+    private static void addProvider(OrtSession.SessionOptions options, InferenceProviderSelector.Provider provider) throws OrtException {
+        switch (provider) {
+            case CUDA -> {
+                OrtCUDAProviderOptions cudaOpts = new OrtCUDAProviderOptions(0);
+                try {
             // Only grow the BFC arena by exactly what is needed, never pre-allocate.
             cudaOpts.add("arena_extend_strategy", "kSameAsRequested");
             // Heuristic: fast startup, no exhaustive benchmarking, workspace-efficient.
             cudaOpts.add("cudnn_conv_algo_search", "HEURISTIC");
             cudaOpts.add("do_copy_in_default_stream", "1");
-            opts.addCUDA(cudaOpts);
-            cudaOpts.close();
-            added = true;
-            setResolvedProviderOnce("CUDA");
-        } catch (Throwable t) {
-            if (cudaWarnLoggedOnce.compareAndSet(false, true)) {
-                LOG.warn("CUDA not available: {} - {}. This is expected if you are not using a CUDA build.",
-                        t.getClass().getSimpleName(), t.getMessage());
-            }
-        }
-
-        if (!added) {
-            try {
-                opts.addDirectML(0);
-                added = true;
-                setResolvedProviderOnce("DirectML");
-            } catch (Throwable t) {
-                if (dmlWarnLoggedOnce.compareAndSet(false, true)) {
-                    LOG.warn("DirectML not available: {} - {}. This is expected if you are not using a DirectML build.",
-                            t.getClass().getSimpleName(), t.getMessage());
+                    options.addCUDA(cudaOpts);
+                } finally {
+                    cudaOpts.close();
                 }
             }
-        }
-
-        if (!added) {
-            try {
-                // ENABLE_ON_SUBGRAPH: allow CoreML to handle partial graphs with CPU fallback
-                // for unsupported ops, maximising GPU utilisation without requiring full-graph support.
-                opts.addCoreML(EnumSet.of(CoreMLFlags.ENABLE_ON_SUBGRAPH));
-                added = true;
-                setResolvedProviderOnce("CoreML");
-            } catch (Throwable t) {
-                if (coremlWarnLoggedOnce.compareAndSet(false, true)) {
-                    LOG.warn("CoreML not available: {} - {}. This is expected on non-macOS platforms.",
-                            t.getClass().getSimpleName(), t.getMessage());
-                }
+            case DIRECTML -> options.addDirectML(0);
+            case COREML -> options.addCoreML(EnumSet.of(CoreMLFlags.ENABLE_ON_SUBGRAPH));
+            case CPU -> { }
             }
-        }
-        if (gpuRequired && !added) {
-            throw new OrtException(
-                    "inference.device=gpu but no GPU provider (CUDA, DirectML, CoreML) is available. " +
-                    "Use the appropriate build for your platform or set inference.device=cpu.");
-        }
-        if (!added) {
-            setResolvedProviderOnce("CPU");
-            if (noGpuWarnLoggedOnce.compareAndSet(false, true)) {
-                LOG.warn("No GPU provider loaded. Check drivers and that the mod jar is the GPU build.");
-            }
-        }
     }
 
     private static float[] runWithSession(OrtSession session, Object[][] inputs) {
@@ -381,20 +396,20 @@ public final class OnnxModel implements AutoCloseable {
 
     @Override
     public void close() {
-        synchronized (GPU_SLOT_LOCK) {
-            if (gpuSlotHolder == this && activeGpuSession != null) {
-                try { activeGpuSession.close(); } catch (OrtException ignored) {}
-                activeGpuSession = null;
-                gpuSlotHolder = null;
+        synchronized (ACCELERATOR_SLOT_LOCK) {
+            if (acceleratorSlotHolder == this && activeAcceleratorSession != null) {
+                try { activeAcceleratorSession.close(); } catch (OrtException ignored) {}
+                activeAcceleratorSession = null;
+                acceleratorSlotHolder = null;
             }
         }
         if (cpuSession != null) {
             try { cpuSession.close(); } catch (OrtException ignored) {}
             cpuSession = null;
         }
-        if (gpuSession != null) {
-            try { gpuSession.close(); } catch (OrtException ignored) {}
-            gpuSession = null;
+        if (acceleratorSession != null) {
+            try { acceleratorSession.close(); } catch (OrtException ignored) {}
+            acceleratorSession = null;
         }
     }
 }

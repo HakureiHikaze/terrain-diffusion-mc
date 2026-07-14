@@ -12,13 +12,13 @@ Three builds are available on the [Releases](https://github.com/xandergos/terrai
 
 | Build                     | Supports                    | Setup required                          |
 |---------------------------| --------------------------- | --------------------------------------- |
-| **Windows** (recommended) | Windows with any modern GPU | None                                    |
-| **CUDA**                  | NVIDIA GPUs                 | [CUDA + cuDNN install](CUDA_INSTALL.md) |
-| **CPU**                   | Everything else             | None                                    |
+| **Windows** (DirectML)    | Windows GPUs                | None                                    |
+| **CUDA**                  | NVIDIA GPUs on Linux/Windows | [CUDA + cuDNN install](CUDA_INSTALL.md) |
+| **CPU**                   | x86_64 Linux and all other systems | None                           |
 
 > **Mac users:** the CPU build automatically uses CoreML for hardware acceleration on Apple Silicon. No extra setup is needed.
 
-Use the `-cuda` build only if you are on Linux, or have an NVIDIA GPU and prefer CUDA (may improve performance).
+Use the `-cuda` build on an NVIDIA system when CUDA dependencies are installed. Linux AMD GPU acceleration is not currently provided; use the CPU artifact on AMD Linux systems.
 
 ## Requirements
 
@@ -49,11 +49,10 @@ Edit `config/terrain-diffusion-mc.properties` (created automatically on first la
 ```
 # Terrain Diffusion MC configuration
 
-# Inference device: "cpu", "gpu", or "auto" (try GPU first then fall back to CPU).
-# "gpu" uses DirectML on the -windows build, or CUDA on the -cuda build.
-# GPU builds default to "gpu" so startup fails loudly if no GPU is detected.
-# CPU build defaults to "auto": uses CoreML on macOS, otherwise CPU.
-inference.device=gpu
+# cpu always uses CPU. gpu requires this artifact's accelerator and fails if unavailable.
+# auto uses the artifact's accelerator when available, then falls back to CPU.
+# CPU artifacts default to auto (CoreML on supported macOS, CPU on Linux).
+inference.device=auto
 
 # Offload inactive models from VRAM between pipeline stages.
 # Keeps peak VRAM to ~1.5-2 GB. Set to false if you have ~2.5+ GB free for slightly
@@ -89,13 +88,11 @@ This value is saved with the world save and affects:
 
 ## Common Issues
 
-**A dynamic link library (DLL) initialization routine failed**
+**CUDA provider failed to load / missing shared library or DLL**
 
-This can happen for some older Java versions. Please update to the most recent version of Java 21 or higher. The [latest Microsoft OpenJDK 21](https://learn.microsoft.com/en-us/java/openjdk/download) version is known to work.
+The CUDA artifact was loaded but its native CUDA/cuDNN dependencies were unavailable. On Linux, check `LD_LIBRARY_PATH` and the required `.so` files; on Windows, check `PATH` and DLLs. See [CUDA_INSTALL.md](CUDA_INSTALL.md), or use the CPU artifact.
 
-**LoadLibrary failed with error 126** *(CUDA build only)*
-
-This is typically due to an improper CUDA or cuDNN installation. See [CUDA_INSTALL.md](CUDA_INSTALL.md) for troubleshooting steps.
+The startup log contains `Terrain diffusion inference: ... selected=...`; it identifies CPU, CUDA, DirectML, or CoreML selected for the artifact.
 
 **java.lang.IllegalStateException: Failed to load terrain-diffusion models**
 
@@ -107,6 +104,14 @@ Terrain Diffusion's models take up about 2.5GB of RAM, so make sure to allocate 
 ## Building from Source
 
 An internet connection is required during the build to fetch the pinned model manifest metadata from Hugging Face.
+
+Use Java 21 to run Gradle. Java 25 currently fails before configuration with `Unsupported class file major version 69`; this project intentionally does not upgrade Gradle/Loom as part of platform support. On Fish, select a Java 21 installation for one command:
+
+```fish
+env JAVA_HOME=/usr/lib/jvm/java-21-openjdk PATH=/usr/lib/jvm/java-21-openjdk/bin:$PATH ./gradlew --no-daemon clean build
+```
+
+Adjust the Java path for your distribution. Confirm it with `java -version` after exporting the same `JAVA_HOME` and `PATH`.
 
 The `-windows` build requires `libs/onnxruntime-dml.jar`, which is provided as part of the repo. See [Building onnxruntime with DirectML](#building-onnxruntime-with-directml) to build from source. 
 
@@ -124,6 +129,18 @@ Build for CPU (also handles macOS/CoreML automatically):
 ```
 ./gradlew build -PuseCpu=true
 ```
+
+On Linux, a plain build is the CPU artifact:
+```
+./gradlew clean build
+```
+
+Linux CUDA packaging does not require a GPU:
+```
+./gradlew build -PuseCuda=true
+```
+
+`buildAll` builds CPU and CUDA artifacts on Linux/macOS, and also DirectML on Windows. `buildDml` is intentionally Windows-only; packaging an artifact never launches Minecraft.
 
 Build all:
 ```

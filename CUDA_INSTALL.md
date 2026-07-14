@@ -1,167 +1,65 @@
-# CUDA Setup (for the `-cuda` build)
+# CUDA setup
 
-This guide is only needed for the `-cuda` build of Terrain Diffusion MC. If you downloaded the `-windows` build, no setup is required.
+This guide applies only to the `-cuda` artifact. It works on NVIDIA systems running Linux or Windows. The CPU artifact needs none of these libraries. Linux AMD GPU acceleration is not currently available through this mod; use the CPU artifact.
 
-## Installation Steps (Windows)
+The CUDA artifact embeds ONNX Runtime's CUDA provider but relies on NVIDIA's CUDA and cuDNN native libraries installed on the system. Match those dependencies to the ONNX Runtime version bundled by the artifact; consult the [ONNX Runtime CUDA requirements](https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html) rather than assuming a toolkit version from a driver banner.
 
-#### Step 1: Install CUDA 12
+## Linux: Ubuntu and Debian
 
-Go to the [CUDA Toolkit Archive](https://developer.nvidia.com/cuda-toolkit-archive) and download any **12.x** version.
+1. Confirm Java and the NVIDIA driver are visible:
 
-> ⚠️ Do not install version 13 — it isn't supported yet.
+   ```fish
+   java -version
+   nvidia-smi
+   ```
 
-#### Step 2: Install cuDNN 9
+2. Install the CUDA toolkit and cuDNN through NVIDIA's repository instructions or your distribution's packages, using versions compatible with the bundled ONNX Runtime.
 
-Go to the [cuDNN download page](https://developer.nvidia.com/cudnn) and download any **9.x** version.
+3. Start the launcher with the directory containing the CUDA and cuDNN shared libraries available. For a package-managed location, for example:
 
-#### Step 3: Add CUDA to PATH
+   ```fish
+   set -x LD_LIBRARY_PATH /usr/lib/x86_64-linux-gnu $LD_LIBRARY_PATH
+   prism-launcher
+   ```
 
-After installing, find your CUDA `bin` folder containing `cudart64_12.dll`. It should look like this:
+   Prefer the package-managed library directory actually used by your installation. Do not create global compatibility symlinks merely to satisfy the launcher.
 
-`C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.9\bin`
+## Linux: Arch and CachyOS
 
-The version number (e.g. `v12.9`) may differ slightly, that's fine. Before copying the path, confirm the folder contains a file named `cudart64_12.dll`.
+1. Confirm the driver and Java:
 
-Then add this path to your system PATH. ([How do I edit PATH on Windows?](https://www.architectryan.com/2018/03/17/add-to-the-path-on-windows-10/))
+   ```fish
+   java -version
+   nvidia-smi
+   ```
 
-> Ensure that you **edit** the system **path** or **PATH** variable, adding this **folder** to the list, as shown in the link above. Do **not** create a new variable.
+2. Install NVIDIA's CUDA toolkit and cuDNN with your normal package manager or an isolated NVIDIA toolkit installation. Keep its libraries in a dedicated directory; avoid copying or symlinking them into `/usr/lib`.
 
-#### Step 4: Add cuDNN to PATH
+3. Launch Prism with that directory first in its library search path. Replace the example with your installed toolkit location:
 
-Find the cuDNN folder containing `cudnn64_9.dll`. It should look something like this:
+   ```fish
+   set -x LD_LIBRARY_PATH /opt/cuda/lib64 $LD_LIBRARY_PATH
+   prism-launcher
+   ```
 
-`C:\Program Files\NVIDIA\CUDNN\v9.x\bin\12.x\x64`
+For Prism Launcher, the same setting can be made per instance: **Edit → Settings → Environment Variables**, add `LD_LIBRARY_PATH` with the directory containing `libcudart.so` and `libcudnn.so`. This avoids changing global shell configuration.
 
-`9.x` and `12.x` should be your cuDNN and CUDA version respectively. Confirm the folder contains `cudnn64_9.dll`, then add it to PATH the same way.
+## Windows
 
-#### Step 5: Restart your PC
+Install CUDA and cuDNN versions compatible with the bundled ONNX Runtime. Add the directories containing their DLLs to `PATH`, then restart the launcher. The DirectML (`-windows`) artifact does not require CUDA.
 
-You may need to restart your PC for PATH changes to take effect. Once you're back, you're all set.
+## Selecting a provider
 
+Edit `config/terrain-diffusion-mc.properties`:
 
----
+- `inference.device=cpu` always uses CPU.
+- `inference.device=gpu` requires CUDA in the CUDA artifact and fails loudly if native dependencies are unavailable.
+- `inference.device=auto` tries CUDA, then uses CPU cleanly if CUDA cannot load.
 
-## Linux
-
-The mod requires **CUDA 12.x** and **cuDNN 9.x**. The approach differs depending on your distro.
-
-> ⚠️ **Do not install CUDA 13** — it is not supported yet. If `nvidia-smi` shows "CUDA Version: 13.x", that is just your driver's maximum supported version, not an installed toolkit. You still need to install CUDA 12.x separately.
-
-### Option A: Ubuntu / Debian (Recommended)
-
-This is the simplest path. NVIDIA provides native `.deb` packages.
-
-#### Step 1: Install CUDA 12
-
-Go to the [CUDA Toolkit Archive](https://developer.nvidia.com/cuda-toolkit-archive), select your Ubuntu version, and follow the `deb (network)` instructions. Make sure you pick a **12.x** version.
-
-#### Step 2: Install cuDNN 9
-
-Go to the [cuDNN download page](https://developer.nvidia.com/cudnn-downloads), select:
-- Linux → x86_64 → Ubuntu → your version → **Deb**
-- Select **CUDA 12** and download
-
-Install with:
-```bash
-sudo dpkg -i cudnn-local-repo-*.deb
-sudo apt-get update
-sudo apt-get install libcudnn9-cuda-12
-```
-#### Step 3: Set LD_LIBRARY_PATH
-
-Before launching Minecraft, set the library path in your terminal:
-
-```bash
-export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu
-```
-
-Then launch your Minecraft launcher from the same terminal session.
-
-> **Prism Launcher / MultiMC users:** You can set this per-instance instead. Go to instance → **Edit** → **Settings** → **Environment Variables** and add `LD_LIBRARY_PATH` = `/usr/lib/x86_64-linux-gnu`. This way you don't need the terminal export every time.
-
-Launch the game. Done.
-
----
-
-### Option B: Arch Linux (and Arch-based distros like EndeavourOS, Manjaro)
-
-Arch does not package CUDA 12.x and 13.x separately in the official repos, so the cleanest approach for users who need to keep another CUDA version is to install CUDA 12.x via the `.run` file into an isolated directory.
-
-#### Step 1: Download CUDA 12.x runfile
-
-Go to the [CUDA Toolkit Archive](https://developer.nvidia.com/cuda-toolkit-archive) and download any distro's **12.x** version as a **Linux runfile (local)**. CUDA 12.0 is known to work.
-
-#### Step 2: Install CUDA 12 into an isolated directory
-
-> ℹ️ This does **not** touch your existing CUDA installation or GPU drivers.
-
-Arch's libxml2 ships under a different versioned name than the runfile expects. Create a symlink first:
-```bash
-sudo ln -s /usr/lib/libxml2.so /usr/lib/libxml2.so.2
-```
-
-Then install:
-```bash
-sudo LD_LIBRARY_PATH=/usr/lib:$LD_LIBRARY_PATH sh cuda_12.x.x_*.run \
-  --silent \
-  --toolkit \
-  --toolkitpath=/usr/local/cuda-12.0 \
-  --no-opengl-libs \
-  --override
-```
-
-The `--override` flag bypasses a gcc version check that fails on Arch. The three "no version information available" warnings that appear are harmless.
-
-Verify it worked:
-```bash
-ls /usr/local/cuda-12.0/lib64/libcudart.so*
-# Should show: libcudart.so.12
-```
-
-#### Step 3: Download and install cuDNN 9.x
-
-Go to the [cuDNN download page](https://developer.nvidia.com/cudnn-downloads) and select:
-- Linux → x86_64 → **Tarball** → **CUDA 12** → **Full**
-
-> ⚠️ Make sure you select **CUDA 12**, not CUDA 13. The filename should contain `cuda12`.
-
-Extract and copy into your CUDA 12 directory:
-```bash
-tar -xf cudnn-linux-x86_64-9.*.tar.xz
-sudo cp cudnn-linux-x86_64-9.*_cuda12-archive/include/cudnn*.h /usr/local/cuda-12.0/include/
-sudo cp -P cudnn-linux-x86_64-9.*_cuda12-archive/lib/libcudnn* /usr/local/cuda-12.0/lib64/
-sudo chmod a+r /usr/local/cuda-12.0/lib64/libcudnn*
-```
-
-Verify:
-```bash
-ls /usr/local/cuda-12.0/lib64/libcudnn.so*
-# Should show: libcudnn.so.9
-```
-
-#### Step 4: Set LD_LIBRARY_PATH
-
-Before launching Minecraft, set the library path in your terminal:
-
-```bash
-export LD_LIBRARY_PATH=/usr/local/cuda-12.0/lib64
-```
-
-Then launch your Minecraft launcher from the same terminal session.
-
-> **Prism Launcher / MultiMC users:** You can set this per-instance instead. Go to instance → **Edit** → **Settings** → **Environment Variables** and add `LD_LIBRARY_PATH` = `/usr/local/cuda-12.0/lib64`. This tells the JVM exactly where to find the CUDA and cuDNN libraries without affecting anything else on your system.
-
-Launch the game. Done.
-
----
+The log line beginning `Terrain diffusion inference:` reports the operating system, artifact variant, requested mode, and selected provider.
 
 ## Troubleshooting
 
-**LoadLibrary failed with error 126**
+If a Linux CUDA artifact reports that shared libraries cannot load, check that `LD_LIBRARY_PATH` contains the directory holding the required `.so` libraries and that the NVIDIA driver is visible through `nvidia-smi`. If a Windows CUDA artifact cannot load a DLL, check the equivalent directories in `PATH`.
 
-This is typically due to an improper CUDA or cuDNN installation. Things to check:
-
-- The appropriate CUDA folder is in PATH, and the folder contains `cudart64_12.dll`
-- The appropriate cuDNN folder is in PATH, and the folder contains `cudnn64_9.dll`
-- CUDA version is 12.x
-- cuDNN version is 9.x
+When CUDA is unavailable, choose `inference.device=auto` for CPU fallback or install/use the CPU artifact. CPU inference is supported but substantially slower than a compatible accelerator.
