@@ -40,7 +40,6 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* ── Layout ── */
   .layout { display: flex; flex: 1; min-height: 0; }
 
   .sidebar {
@@ -54,494 +53,229 @@
   }
 
   .sidebar-header {
-    padding: 14px 16px 12px;
+    padding: 10px 14px 8px;
     border-bottom: 1px solid var(--border);
     display: flex; align-items: center; gap: 8px;
   }
 
-  .sidebar-header h1 {
-    font-size: 14px; font-weight: 700;
-    color: var(--accent); letter-spacing: 0.03em;
-  }
-
+  .sidebar-header h1 { font-size: 14px; font-weight: 700; color: var(--accent); letter-spacing: 0.03em; flex: 1; }
   .sidebar-header .logo { font-size: 18px; line-height: 1; }
 
-  /* ── Sections ── */
-  .section {
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
-    display: flex; flex-direction: column; gap: 8px;
+  .lang-btn {
+    background: none; border: 1px solid var(--border);
+    border-radius: 4px; color: var(--text-dim); cursor: pointer;
+    font-size: 13px; padding: 3px 6px; line-height: 1;
+    transition: all var(--transition);
   }
+  .lang-btn:hover { border-color: var(--accent); color: var(--text); background: var(--accent-dim); }
 
-  .sec-header {
-    display: flex; align-items: center; justify-content: space-between;
-    cursor: pointer;
-  }
+  .section { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
 
-  .sec-title {
-    font-size: 10px; font-weight: 700;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--muted);
-  }
-
-  .sec-arrow {
-    font-size: 10px; color: var(--muted);
-    transition: transform var(--transition);
-  }
+  .sec-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+  .sec-title { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .sec-arrow { font-size: 10px; color: var(--muted); transition: transform var(--transition); }
   .sec-header.collapsed .sec-arrow { transform: rotate(-90deg); }
   .sec-body { display: flex; flex-direction: column; gap: 8px; }
   .sec-header.collapsed + .sec-body { display: none; }
 
-  /* ── Seed ── */
-  .seed-display {
-    font-size: 18px; font-weight: 600;
-    font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
-    color: var(--text);
-    word-break: break-all;
-  }
-
+  .seed-display { font-size: 18px; font-weight: 600; font-family: 'JetBrains Mono', 'Cascadia Code', monospace; color: var(--text); word-break: break-all; }
   .seed-row { display: flex; gap: 6px; }
-
-  /* ── Channel buttons ── */
   .channel-grid { display: flex; flex-wrap: wrap; gap: 4px; }
 
-  /* ── Filter ── */
-  .filter-header {
-    display: flex; align-items: center; justify-content: space-between;
-  }
+  .toggle-label { display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--text-dim); font-size: 12px; }
+  .toggle-label input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; width: 14px; height: 14px; }
 
-  .toggle-label {
-    display: flex; align-items: center; gap: 5px;
-    cursor: pointer; color: var(--text-dim); font-size: 12px;
-  }
-
-  .toggle-label input[type="checkbox"] {
-    accent-color: var(--accent); cursor: pointer;
-    width: 14px; height: 14px;
-  }
-
-  .fch {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 8px 10px;
-    transition: border-color var(--transition);
-  }
+  .fch { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; transition: border-color var(--transition); }
   .fch:hover { border-color: var(--border-focus); }
-
-  .fch-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 6px;
-  }
-
+  .fch-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
   .fch-name { font-weight: 600; font-size: 12px; }
+  .fch-vals { display: flex; justify-content: space-between; font-size: 11px; font-family: monospace; color: var(--accent); margin-top: 4px; }
 
-  .fch-vals {
-    display: flex; justify-content: space-between;
-    font-size: 11px; font-family: monospace;
-    color: var(--accent); margin-top: 4px;
-  }
-
-  /* ── Dual-range slider ── */
   .dual-range { position: relative; height: 20px; }
-
-  .dual-range .track-bg {
-    position: absolute; top: 9px; left: 0; right: 0;
-    height: 3px; background: var(--track);
-    border-radius: 2px; pointer-events: none;
-  }
-
-  .dual-range .track-fill {
-    position: absolute; top: 9px;
-    height: 3px; background: var(--accent);
-    border-radius: 2px; pointer-events: none;
-  }
-
-  .dual-range input[type="range"] {
-    position: absolute; width: 100%; height: 20px; top: 0;
-    background: transparent; pointer-events: none;
-    -webkit-appearance: none; appearance: none; outline: none;
-  }
-
-  .dual-range input[type="range"]::-webkit-slider-thumb {
-    pointer-events: all; -webkit-appearance: none; appearance: none;
-    width: 14px; height: 14px; border-radius: 50%;
-    background: var(--accent); cursor: pointer;
-    border: 2px solid var(--bg);
-    box-shadow: 0 0 0 1px var(--accent), 0 2px 6px var(--accent-glow);
-    transition: transform var(--transition);
-  }
+  .dual-range .track-bg { position: absolute; top: 9px; left: 0; right: 0; height: 3px; background: var(--track); border-radius: 2px; pointer-events: none; }
+  .dual-range .track-fill { position: absolute; top: 9px; height: 3px; background: var(--accent); border-radius: 2px; pointer-events: none; }
+  .dual-range input[type="range"] { position: absolute; width: 100%; height: 20px; top: 0; background: transparent; pointer-events: none; -webkit-appearance: none; appearance: none; outline: none; }
+  .dual-range input[type="range"]::-webkit-slider-thumb { pointer-events: all; -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--accent), 0 2px 6px var(--accent-glow); transition: transform var(--transition); }
   .dual-range input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
-
-  .dual-range input[type="range"]::-moz-range-thumb {
-    pointer-events: all; width: 12px; height: 12px;
-    border-radius: 50%; background: var(--accent);
-    cursor: pointer; border: 2px solid var(--bg);
-  }
-
-  .dual-range input[type="range"]:disabled::-webkit-slider-thumb {
-    background: var(--muted); box-shadow: none;
-  }
+  .dual-range input[type="range"]::-moz-range-thumb { pointer-events: all; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--bg); }
+  .dual-range input[type="range"]:disabled::-webkit-slider-thumb { background: var(--muted); box-shadow: none; }
 
   .fch-hint { font-size: 10px; color: var(--muted); text-align: center; padding: 4px 0 2px; }
 
-  /* ── Map area ── */
-  .map-area {
-    flex: 1; display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px; padding: 8px;
-    min-width: 0; min-height: 0;
-  }
-
-  .map-panel {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    display: flex; flex-direction: column;
-    min-height: 0; overflow: hidden;
-    transition: border-color var(--transition);
-  }
+  .map-area { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px; min-width: 0; min-height: 0; }
+  .map-panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); display: flex; flex-direction: column; min-height: 0; overflow: hidden; transition: border-color var(--transition); }
   .map-panel:focus-within { border-color: var(--border-focus); }
 
-  .panel-header {
-    padding: 6px 10px;
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; gap: 6px;
-    flex-shrink: 0; background: var(--surface);
-  }
-
+  .panel-header { padding: 6px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px; flex-shrink: 0; background: var(--surface); }
   .panel-title { font-weight: 600; font-size: 12px; flex-shrink: 0; color: var(--text-dim); }
   .panel-title::before { content: '▸ '; color: var(--accent); }
+  .panel-info { color: var(--muted); font-size: 11px; font-family: monospace; margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 
-  .panel-info {
-    color: var(--muted); font-size: 11px; font-family: monospace;
-    margin-left: auto; white-space: nowrap;
-    overflow: hidden; text-overflow: ellipsis; min-width: 0;
-  }
+  .nav-grid { display: grid; grid-template-columns: 28px 1fr 28px; grid-template-rows: 28px 1fr 28px; flex: 1; min-height: 0; padding: 4px; gap: 2px; }
 
-  /* ── Nav grid (pan buttons around map) ── */
-  .nav-grid {
-    display: grid;
-    grid-template-columns: 28px 1fr 28px;
-    grid-template-rows: 28px 1fr 28px;
-    flex: 1; min-height: 0;
-    padding: 4px; gap: 2px;
-  }
-
-  .pan-btn {
-    display: flex; align-items: center; justify-content: center;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 4px; color: var(--text-dim);
-    cursor: pointer; font-size: 12px;
-    width: 100%; height: 100%;
-    transition: all var(--transition);
-  }
+  .pan-btn { display: flex; align-items: center; justify-content: center; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; color: var(--text-dim); cursor: pointer; font-size: 12px; width: 100%; height: 100%; transition: all var(--transition); }
   .pan-btn:hover { background: var(--accent-dim); border-color: var(--accent); color: var(--text); }
   .pan-btn:active { background: var(--accent); color: #fff; transform: scale(0.95); }
 
-  .map-container {
-    grid-column: 2; grid-row: 2;
-    position: relative; overflow: hidden;
-    background: #060813;
-    border-radius: 3px; cursor: grab;
-  }
+  .map-container { grid-column: 2; grid-row: 2; position: relative; overflow: hidden; background: #060813; border-radius: 3px; cursor: grab; }
   .map-container.grabbing { cursor: grabbing; }
 
-  .map-img {
-    width: 100%; height: 100%;
-    display: block;
-    transition: opacity .2s;
-  }
-
+  .map-img { width: 100%; height: 100%; display: block; transition: opacity .2s; }
   .map-img.loading { opacity: 0.35; filter: blur(2px); }
-
   #coarse-img { image-rendering: pixelated; }
 
-  .map-placeholder {
-    position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--muted); font-size: 12px; pointer-events: none;
-    text-align: center; padding: 12px; line-height: 1.6;
-  }
+  .map-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12px; pointer-events: none; text-align: center; padding: 12px; line-height: 1.6; }
 
-  .spinner {
-    position: absolute; top: 8px; right: 8px;
-    width: 16px; height: 16px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    display: none;
-  }
+  .spinner { position: absolute; top: 8px; right: 8px; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
   .spinner.active { display: block; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .tile-marker {
-    position: absolute;
-    border: 2px solid var(--highlight);
-    box-shadow: 0 0 0 2px rgba(249,115,22,0.25), 0 0 12px rgba(249,115,22,0.15);
-    pointer-events: none; display: none;
-    border-radius: 2px;
-  }
+  .tile-marker { position: absolute; border: 2px solid var(--highlight); box-shadow: 0 0 0 2px rgba(249,115,22,0.25), 0 0 12px rgba(249,115,22,0.15); pointer-events: none; display: none; border-radius: 2px; }
 
   .btn-up    { grid-column: 2; grid-row: 1; }
   .btn-down  { grid-column: 2; grid-row: 3; }
   .btn-left  { grid-column: 1; grid-row: 2; }
   .btn-right { grid-column: 3; grid-row: 2; }
 
-  /* ── Controls ── */
-  input[type="number"], input[type="text"] {
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: 4px; color: var(--text);
-    padding: 5px 8px; font-size: 12px;
-    outline: none; flex: 1; min-width: 0;
-    transition: border-color var(--transition);
-  }
+  input[type="number"], input[type="text"] { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); padding: 5px 8px; font-size: 12px; outline: none; flex: 1; min-width: 0; transition: border-color var(--transition); }
   input[type="number"]:focus, input[type="text"]:focus { border-color: var(--accent); }
 
-  button {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 4px; color: var(--text);
-    padding: 5px 10px; font-size: 12px;
-    cursor: pointer; white-space: nowrap;
-    transition: all var(--transition);
-    flex-shrink: 0;
-  }
+  button { background: var(--card); border: 1px solid var(--border); border-radius: 4px; color: var(--text); padding: 5px 10px; font-size: 12px; cursor: pointer; white-space: nowrap; transition: all var(--transition); flex-shrink: 0; }
   button:hover { background: var(--accent-dim); border-color: var(--accent); }
   button:active { background: var(--accent); transform: scale(0.97); }
-  button.active {
-    background: var(--accent); border-color: var(--accent);
-    color: #fff; box-shadow: 0 0 10px var(--accent-glow);
-  }
+  button.active { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 0 10px var(--accent-glow); }
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   button.primary:hover { opacity: 0.85; background: var(--accent-dim); }
 
-  button.fch-clear {
-    padding: 0 6px; font-size: 14px; line-height: 1;
-    color: var(--muted); background: transparent; border: none;
-    min-width: 20px; border-radius: 3px;
-  }
+  button.fch-clear { padding: 0 6px; font-size: 14px; line-height: 1; color: var(--muted); background: transparent; border: none; min-width: 20px; border-radius: 3px; }
   button.fch-clear:hover { color: var(--text); background: var(--accent-dim); }
 
-  /* ── Status bar ── */
-  .status-bar {
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    padding: 3px 14px; color: var(--muted);
-    font-size: 11px; font-family: monospace;
-    flex-shrink: 0; display: flex; align-items: center;
-    gap: 12px;
-  }
-
+  .status-bar { background: var(--surface); border-top: 1px solid var(--border); padding: 3px 14px; color: var(--muted); font-size: 11px; font-family: monospace; flex-shrink: 0; display: flex; align-items: center; gap: 12px; }
   .status-hint { margin-left: auto; color: var(--text-dim); }
 
-  /* ── Tooltip ── */
-  .hover-tooltip {
-    position: fixed;
-    background: rgba(12,14,28,0.96);
-    border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px 14px;
-    font-family: monospace; font-size: 13px;
-    line-height: 1.8; pointer-events: none;
-    display: none; z-index: 200;
-    min-width: 170px;
-    box-shadow: 0 4px 24px rgba(0,0,0,.55);
-    backdrop-filter: blur(8px);
-  }
-
+  .hover-tooltip { position: fixed; background: rgba(12,14,28,0.96); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-family: monospace; font-size: 13px; line-height: 1.8; pointer-events: none; display: none; z-index: 200; min-width: 170px; box-shadow: 0 4px 24px rgba(0,0,0,.55); backdrop-filter: blur(8px); }
   .hover-tooltip .ht-coord { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
   .hover-tooltip .ht-row { display: flex; justify-content: space-between; gap: 14px; }
   .hover-tooltip .ht-label { color: var(--muted); }
   .hover-tooltip .ht-val   { color: var(--text); font-weight: 600; }
 
-  /* ── Coordinate Helper ── */
-  .coord-scale-row {
-    display: flex; align-items: center; gap: 8px;
-  }
-
-  .coord-scale-track {
-    flex: 1; height: 8px; position: relative;
-    border-left: 2px solid var(--accent);
-    border-right: 2px solid var(--accent);
-    border-bottom: 2px solid var(--accent);
-    border-radius: 0 0 2px 2px;
-  }
-
-  .coord-scale-fill {
-    position: absolute; left: 0; top: 0;
-    height: 100%; background: var(--accent);
-    opacity: 0.25; border-radius: 0 0 2px 2px; width: 0;
-  }
-
-  .coord-scale-lbl {
-    font-size: 11px; color: var(--accent);
-    white-space: nowrap; font-weight: 600;
-  }
-
+  .coord-scale-row { display: flex; align-items: center; gap: 8px; }
+  .coord-scale-track { flex: 1; height: 8px; position: relative; border-left: 2px solid var(--accent); border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent); border-radius: 0 0 2px 2px; }
+  .coord-scale-fill { position: absolute; left: 0; top: 0; height: 100%; background: var(--accent); opacity: 0.25; border-radius: 0 0 2px 2px; width: 0; }
+  .coord-scale-lbl { font-size: 11px; color: var(--accent); white-space: nowrap; font-weight: 600; }
   .coord-block-size { font-size: 11px; color: var(--text-dim); }
-
   .coord-hint { font-size: 11px; color: var(--muted); font-style: italic; }
-
   .coord-xyz { display: flex; flex-direction: column; gap: 3px; }
-
-  .coord-xy-row {
-    display: flex; justify-content: space-between;
-    font-size: 11px;
-  }
-
+  .coord-xy-row { display: flex; justify-content: space-between; font-size: 11px; }
   .coord-xy-lbl { color: var(--muted); }
   .coord-xy-val { font-family: monospace; color: var(--text); font-weight: 600; }
 
-  .coord-tp {
-    display: flex; align-items: center;
-    justify-content: center; gap: 6px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 4px; padding: 6px 10px;
-    font-family: monospace; font-size: 11px;
-    color: var(--text); cursor: pointer;
-    user-select: all; transition: all var(--transition);
-  }
+  .coord-tp { display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 6px 10px; font-family: monospace; font-size: 11px; color: var(--text); cursor: pointer; user-select: all; transition: all var(--transition); }
   .coord-tp:hover { border-color: var(--accent); background: var(--accent-dim); }
   .coord-tp.copied { border-color: var(--success) !important; color: var(--success); }
 
-  /* ── Keyboard hint ── */
-  .kbd {
-    display: inline-block;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 3px;
-    padding: 0 4px;
-    font-size: 10px;
-    font-family: monospace;
-    color: var(--text-dim);
-    min-width: 16px;
-    text-align: center;
-  }
+  .kbd { display: inline-block; background: var(--card); border: 1px solid var(--border); border-radius: 3px; padding: 0 4px; font-size: 10px; font-family: monospace; color: var(--text-dim); min-width: 16px; text-align: center; }
 
-  /* ── Responsive ── */
-  @media (max-width: 800px) {
-    .sidebar { width: 240px; }
-    .map-area { grid-template-columns: 1fr; }
-  }
+  @media (max-width: 800px) { .sidebar { width: 240px; } .map-area { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 
 <div class="layout">
-
-  <!-- ── Sidebar ── -->
   <aside class="sidebar">
     <div class="sidebar-header">
-      <span class="logo">🏔</span>
-      <h1>Terrain Diffusion</h1>
+      <span class="logo">🌍</span>
+      <h1 data-i18n="app.title">Terrain Diffusion</h1>
+      <button class="lang-btn" id="lang-toggle" title="Switch language / 切换语言">中</button>
     </div>
 
-    <!-- Seed -->
     <div class="section">
-      <div class="sec-header"><span class="sec-title">Seed</span><span class="sec-arrow">▼</span></div>
+      <div class="sec-header"><span class="sec-title" data-i18n="sec.seed">Seed</span><span class="sec-arrow">▼</span></div>
       <div class="sec-body">
         <div class="seed-display" id="seed-display">—</div>
         <div class="seed-row">
-          <input type="number" id="seed-input" placeholder="Enter seed…">
-          <button id="btn-set-seed" class="primary">Set</button>
+          <input type="number" id="seed-input" data-i18n-placeholder="seed.placeholder" placeholder="Enter seed…">
+          <button id="btn-set-seed" class="primary" data-i18n="seed.set">Set</button>
         </div>
-        <button id="btn-new-seed">🎲  Random</button>
+        <button id="btn-new-seed" data-i18n="seed.random">🎲  Random</button>
       </div>
     </div>
 
-    <!-- Channel -->
     <div class="section">
-      <div class="sec-header"><span class="sec-title">Coarse Channel</span><span class="sec-arrow">▼</span></div>
-      <div class="sec-body">
-        <div class="channel-grid" id="channel-buttons"></div>
-      </div>
+      <div class="sec-header"><span class="sec-title" data-i18n="sec.channel">Coarse Channel</span><span class="sec-arrow">▼</span></div>
+      <div class="sec-body"><div class="channel-grid" id="channel-buttons"></div></div>
     </div>
 
-    <!-- Filter -->
     <div class="section">
-      <div class="sec-header"><span class="sec-title">Filter</span><span class="sec-arrow">▼</span></div>
+      <div class="sec-header"><span class="sec-title" data-i18n="sec.filter">Filter</span><span class="sec-arrow">▼</span></div>
       <div class="sec-body">
-        <label class="toggle-label">
-          <input type="checkbox" id="filter-enable">Enable filter
-        </label>
-        <button id="btn-stats">Load Stats for Sliders</button>
+        <label class="toggle-label" data-i18n="filter.enable">Enable filter<input type="checkbox" id="filter-enable"></label>
+        <button id="btn-stats" data-i18n="filter.stats">Load Stats for Sliders</button>
         <div id="filter-channels"></div>
       </div>
     </div>
 
-    <!-- Coordinate Helper -->
     <div class="section">
-      <div class="sec-header"><span class="sec-title">Coordinates</span><span class="sec-arrow">▼</span></div>
+      <div class="sec-header"><span class="sec-title" data-i18n="sec.coords">Coordinates</span><span class="sec-arrow">▼</span></div>
       <div class="sec-body">
         <div class="coord-block-size" id="coord-block-size">—</div>
         <div class="coord-scale-row">
-          <div class="coord-scale-track">
-            <div class="coord-scale-fill" id="coord-scale-fill"></div>
-          </div>
+          <div class="coord-scale-track"><div class="coord-scale-fill" id="coord-scale-fill"></div></div>
           <span class="coord-scale-lbl" id="coord-scale-lbl">—</span>
         </div>
-        <div id="coord-rows"><span class="coord-hint">Click detail map → copy /tp</span></div>
+        <div id="coord-rows"><span class="coord-hint" data-i18n="coords.hint">Click detail map → copy /tp</span></div>
       </div>
     </div>
   </aside>
 
-  <!-- ── Maps ── -->
   <div class="map-area">
-
-    <!-- Coarse Map -->
     <div class="map-panel" id="coarse-panel">
       <div class="panel-header">
-        <span class="panel-title">Coarse Map</span>
-        <button id="coarse-zoom-in" title="Zoom In (C)">+</button>
-        <button id="coarse-zoom-out" title="Zoom Out (Z)">−</button>
+        <span class="panel-title" data-i18n="map.coarse">Coarse Map</span>
+        <button id="coarse-zoom-in" data-i18n-title="map.zoom_in" title="Zoom In (C)">+</button>
+        <button id="coarse-zoom-out" data-i18n-title="map.zoom_out" title="Zoom Out (Z)">−</button>
         <span class="coord-scale-lbl" id="coarse-zoom-label">100×100</span>
-        <span class="panel-info" id="coarse-info">click a tile</span>
+        <span class="panel-info" id="coarse-info" data-i18n="map.coarse_info">click a tile</span>
       </div>
       <div class="nav-grid">
-        <button class="pan-btn btn-up"    id="coarse-up"    title="↑">&#9650;</button>
-        <button class="pan-btn btn-left"  id="coarse-left"  title="←">&#9664;</button>
+        <button class="pan-btn btn-up" id="coarse-up" title="↑">&#9650;</button>
+        <button class="pan-btn btn-left" id="coarse-left" title="←">&#9664;</button>
         <div class="map-container" id="coarse-container" tabindex="0">
           <img id="coarse-img" class="map-img" alt="coarse map" draggable="false">
           <div class="tile-marker" id="tile-marker"></div>
           <div class="spinner" id="coarse-spinner"></div>
-          <div class="map-placeholder" id="coarse-placeholder">Loading…</div>
+          <div class="map-placeholder" id="coarse-placeholder" data-i18n="map.coarse_loading">Loading…</div>
         </div>
         <button class="pan-btn btn-right" id="coarse-right" title="→">&#9654;</button>
-        <button class="pan-btn btn-down"  id="coarse-down"  title="↓">&#9660;</button>
+        <button class="pan-btn btn-down" id="coarse-down" title="↓">&#9660;</button>
       </div>
     </div>
 
-    <!-- Detail Map -->
     <div class="map-panel" id="detail-panel">
       <div class="panel-header">
-        <span class="panel-title">Detail Map</span>
-        <button class="active" id="mode-relief">Relief</button>
-        <button id="mode-elevation">Elev</button>
-        <button id="mode-temperature">Temp</button>
-        <span class="panel-info" id="detail-info">click coarse to load</span>
+        <span class="panel-title" data-i18n="map.detail">Detail Map</span>
+        <button class="active" id="mode-relief" data-i18n="mode.relief">Relief</button>
+        <button id="mode-elevation" data-i18n="mode.elev">Elev</button>
+        <button id="mode-temperature" data-i18n="mode.temp">Temp</button>
+        <span class="panel-info" id="detail-info" data-i18n="map.detail_info">click coarse to load</span>
       </div>
       <div class="nav-grid">
-        <button class="pan-btn btn-up"    id="detail-up"    title="W / &#8593;">&#9650;</button>
-        <button class="pan-btn btn-left"  id="detail-left"  title="A / &#8592;">&#9664;</button>
+        <button class="pan-btn btn-up" id="detail-up" title="W / ↑">&#9650;</button>
+        <button class="pan-btn btn-left" id="detail-left" title="A / ←">&#9664;</button>
         <div class="map-container" id="detail-container" tabindex="0">
           <img id="detail-img" class="map-img" alt="detail map" draggable="false" style="display:none">
           <div class="spinner" id="detail-spinner"></div>
-          <div class="map-placeholder" id="detail-placeholder">Click coarse map<br>then drag or use <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
+          <div class="map-placeholder" id="detail-placeholder"><span data-i18n="map.detail_placeholder">Click coarse map</span><br><span data-i18n="map.detail_hint">then drag or use</span> <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></div>
         </div>
-        <button class="pan-btn btn-right" id="detail-right" title="D / &#8594;">&#9654;</button>
-        <button class="pan-btn btn-down"  id="detail-down"  title="S / &#8595;">&#9660;</button>
+        <button class="pan-btn btn-right" id="detail-right" title="D / →">&#9654;</button>
+        <button class="pan-btn btn-down" id="detail-down" title="S / ↓">&#9660;</button>
       </div>
     </div>
-
-  </div><!-- .map-area -->
-</div><!-- .layout -->
+  </div>
+</div>
 
 <div class="status-bar" id="status-bar">
-  <span>Connecting…</span>
+  <span data-i18n="status.connecting">Connecting…</span>
   <span class="status-hint" id="status-hint"></span>
 </div>
 <div class="hover-tooltip" id="hover-tooltip"></div>
@@ -553,13 +287,60 @@
   const DETAIL_PAN_STEP = 256;
   const DETAIL_SIZE = 1024;
 
-  const CHANNEL_META = [
-    { ch: 0, name: 'Elev',    unit: 'm',  step: 50,  defMin: -8000, defMax: 8000 },
-    { ch: 2, name: 'Temp',    unit: '°',  step: 1,   defMin: -30,   defMax: 40   },
-    { ch: 3, name: 'T std',   unit: '°',  step: 0.5, defMin: 0,     defMax: 20   },
-    { ch: 4, name: 'Precip',  unit: '',   step: 10,  defMin: 0,     defMax: 2000 },
-    { ch: 5, name: 'P CV',    unit: '',   step: 1,   defMin: 0,     defMax: 200  },
-  ];
+  const I18N = {
+    en: {
+      "app.title": "Terrain Diffusion",
+      "sec.seed": "Seed", "sec.channel": "Coarse Channel", "sec.filter": "Filter", "sec.coords": "Coordinates",
+      "seed.placeholder": "Enter seed…", "seed.set": "Set", "seed.random": "🎲  Random",
+      "filter.enable": "Enable filter", "filter.stats": "Load Stats for Sliders", "filter.hint": "Click \"Load Stats\" for ranges",
+      "mode.relief": "Relief", "mode.elev": "Elev", "mode.temp": "Temp",
+      "map.coarse": "Coarse Map", "map.detail": "Detail Map",
+      "map.coarse_info": "click a tile", "map.detail_info": "click coarse to load",
+      "map.coarse_loading": "Loading…",
+      "map.detail_placeholder": "Click coarse map", "map.detail_hint": "then drag or use",
+      "map.zoom_in": "Zoom In (C)", "map.zoom_out": "Zoom Out (Z)",
+      "coords.hint": "Click detail map → copy /tp", "coords.block": "1 block = {0} m",
+      "tooltip.elev": "Elev", "tooltip.temp": "Temp", "tooltip.mcy": "MC Y",
+      "tooltip.px": "px({0},{1})",
+      "status.connecting": "Connecting…",
+      "status.connected": "Seed {0}  |  scale {1}×",
+      "status.connect_fail": "Connection failed — is the Minecraft client running?",
+      "status.seed_set": "Seed set to {0}", "status.new_seed": "New seed: {0}",
+      "status.tile": "Tile ci={0}, cj={1}", "status.stats": "Stats — {0}",
+      "status.coarse_error": "Coarse map load error", "status.detail_error": "Detail map load error",
+      "hint.shortcuts": "Drag to pan  |  ←↑↓→  +/-  C/Z  W/A/S/D",
+      "coord.copied": "Copied!", "coord.copy_title": "Click to copy",
+      "coord.elev": "Elev", "coord.x": "X", "coord.y": "Y", "coord.z": "Z",
+      "channel.Elev": "Elev", "channel.p5": "p5", "channel.Temp": "Temp",
+      "channel.T std": "T std", "channel.Precip": "Precip", "channel.Precip CV": "P CV",
+    },
+    zh: {
+      "app.title": "地形扩散探索器",
+      "sec.seed": "种子", "sec.channel": "粗图通道", "sec.filter": "过滤器", "sec.coords": "坐标",
+      "seed.placeholder": "输入种子…", "seed.set": "设置", "seed.random": "🎲  随机",
+      "filter.enable": "启用过滤", "filter.stats": "加载滑块统计数据", "filter.hint": "点击「加载滑块统计数据」获取范围",
+      "mode.relief": "地形", "mode.elev": "高程", "mode.temp": "温度",
+      "map.coarse": "粗图", "map.detail": "细节图",
+      "map.coarse_info": "点击瓦片载入细图", "map.detail_info": "点击粗图瓦片加载",
+      "map.coarse_loading": "载入中…",
+      "map.detail_placeholder": "点击粗图瓦片", "map.detail_hint": "拖拽或使用",
+      "map.zoom_in": "放大 (C)", "map.zoom_out": "缩小 (Z)",
+      "coords.hint": "点击细节图 → 复制 /tp", "coords.block": "1 格 = {0} m",
+      "tooltip.elev": "高程", "tooltip.temp": "温度", "tooltip.mcy": "MC Y",
+      "tooltip.px": "像素({0},{1})",
+      "status.connecting": "连接中…",
+      "status.connected": "种子 {0}  |  比例 {1}×",
+      "status.connect_fail": "连接失败 — Minecraft 客户端是否正在运行？",
+      "status.seed_set": "种子已设为 {0}", "status.new_seed": "新种子: {0}",
+      "status.tile": "瓦片 ci={0}, cj={1}", "status.stats": "统计 — {0}",
+      "status.coarse_error": "粗图加载失败", "status.detail_error": "细节图加载失败",
+      "hint.shortcuts": "拖拽平移  |  ←↑↓→  +/-  C/Z  W/A/S/D",
+      "coord.copied": "已复制！", "coord.copy_title": "点击复制",
+      "coord.elev": "海拔", "coord.x": "X", "coord.y": "Y", "coord.z": "Z",
+      "channel.Elev": "高程", "channel.p5": "p5", "channel.Temp": "温度",
+      "channel.T std": "温标", "channel.Precip": "降水", "channel.Precip CV": "降水CV",
+    }
+  };
 
   const state = {
     seed: null, channel: 0, channels: [],
@@ -568,7 +349,17 @@
     coarseData: null,
     detailRaw: null, detailCI: null, detailCJ: null,
     detailPanI: 0, detailPanJ: 0, detailMode: 'relief',
+    lang: (() => { try { return localStorage.getItem('td-lang') || (navigator.language.startsWith('zh') ? 'zh' : 'en'); } catch(_) { return 'en'; } })(),
   };
+
+  function t(key, ...args) {
+    let s = (I18N[state.lang] || I18N['en'])[key];
+    if (s === undefined) s = key;
+    for (let i = 0; i < args.length; i++) s = s.replace('{' + i + '}', args[i]);
+    return s;
+  }
+
+  function fmt(num, unit) { return num.toFixed(num === Math.round(num) ? 0 : 1) + ' ' + unit; }
 
   // ── DOM refs ──
   const seedDisplay     = document.getElementById('seed-display');
@@ -598,24 +389,78 @@
   const coordScaleFill  = document.getElementById('coord-scale-fill');
   const coordScaleLbl   = document.getElementById('coord-scale-lbl');
   const coordBlockSize  = document.getElementById('coord-block-size');
+  const langToggle      = document.getElementById('lang-toggle');
 
-  // ── Collapsible sections ──
+  // ── Language ──
+  function applyI18n() {
+    document.documentElement.lang = state.lang;
+    langToggle.textContent = state.lang === 'zh' ? 'EN' : '中';
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (key) el.textContent = t(key);
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+      el.title = t(el.getAttribute('data-i18n-title'));
+    });
+    // Rebuild filter hints and channel buttons
+    refreshFilterHints();
+    if (state.channels.length) buildChannelButtons(state.channels);
+    updateCoordScale();
+    updateCoarseZoomLabel();
+  }
+
+  langToggle.addEventListener('click', () => {
+    state.lang = state.lang === 'zh' ? 'en' : 'zh';
+    try { localStorage.setItem('td-lang', state.lang); } catch(_) {}
+    applyI18n();
+    // Refresh dynamic content
+    if (state.coarseData) updateCoarseInfo();
+    if (state.detailCI !== null) updateDetailInfo();
+    if (state.seed) updateStatusBar();
+    if (state.detailRaw && _lastDetailRC) showDetailCoords(_lastDetailRC.r, _lastDetailRC.c);
+  });
+
+  function updateStatusBar() {
+    statusBar.firstChild.textContent = t('status.connected', state.seed, state.coordScale || 1);
+  }
+
+  function updateCoarseInfo() {
+    const { coarseOffsetI: oi, coarseOffsetJ: oj, coarseWindow: w } = state;
+    coarseInfo.textContent = `ci=[${oi - w}…${oi + w}], cj=[${oj - w}…${oj + w}]`;
+  }
+
+  function updateDetailInfo() {
+    detailInfo.textContent = `ci=${state.detailCI}, cj=${state.detailCJ} | pan=(${state.detailPanI},${state.detailPanJ})`;
+  }
+
+  // ── Sections ──
   document.querySelectorAll('.sec-header').forEach(hdr => {
     hdr.addEventListener('click', () => hdr.classList.toggle('collapsed'));
   });
 
-  function clamp(value, min, max) { return Math.min(Math.max(value, min), max); }
+  function clamp(v, lo, hi) { return Math.min(Math.max(v, lo), hi); }
 
-  // ── Filter channel widgets ──
-  CHANNEL_META.forEach(({ ch, name, unit, step, defMin, defMax }) => {
+  // ── Filter channels ──
+  const CHANNEL_META = [
+    { ch: 0, nameKey: 'channel.Elev',   unit: 'm',  step: 50,  defMin: -8000, defMax: 8000 },
+    { ch: 2, nameKey: 'channel.Temp',   unit: '°',  step: 1,   defMin: -30,   defMax: 40   },
+    { ch: 3, nameKey: 'channel.T std',  unit: '°',  step: 0.5, defMin: 0,     defMax: 20   },
+    { ch: 4, nameKey: 'channel.Precip', unit: '',   step: 10,  defMin: 0,     defMax: 2000 },
+    { ch: 5, nameKey: 'channel.Precip CV', unit: '', step: 1,  defMin: 0,     defMax: 200  },
+  ];
+
+  CHANNEL_META.forEach(({ ch, nameKey, unit, step, defMin, defMax }) => {
     const div = document.createElement('div');
     div.className = 'fch'; div.id = `fch-${ch}`;
-    div.innerHTML = `<div class="fch-header"><span class="fch-name">${name}</span><button class="fch-clear" title="Clear">×</button></div><div class="dual-range"><div class="track-bg"></div><div class="track-fill" id="fch-${ch}-fill"></div><input type="range" id="fch-${ch}-min" min="${defMin}" max="${defMax}" step="${step}" value="${defMin}"><input type="range" id="fch-${ch}-max" min="${defMin}" max="${defMax}" step="${step}" value="${defMax}"></div><div class="fch-vals"><span id="fch-${ch}-min-val">—</span><span id="fch-${ch}-max-val">—</span></div><div class="fch-hint" id="fch-${ch}-hint">Click "Load Stats" for ranges</div>`;
+    div.innerHTML = `<div class="fch-header"><span class="fch-name" data-i18n="${nameKey}">${t(nameKey)}</span><button class="fch-clear" title="Clear">×</button></div><div class="dual-range"><div class="track-bg"></div><div class="track-fill" id="fch-${ch}-fill"></div><input type="range" id="fch-${ch}-min" min="${defMin}" max="${defMax}" step="${step}" value="${defMin}"><input type="range" id="fch-${ch}-max" min="${defMin}" max="${defMax}" step="${step}" value="${defMax}"></div><div class="fch-vals"><span id="fch-${ch}-min-val">—</span><span id="fch-${ch}-max-val">—</span></div><div class="fch-hint" id="fch-${ch}-hint" data-i18n="filter.hint">${t('filter.hint')}</div>`;
     filterChannels.appendChild(div);
 
-    const minEl = document.getElementById(`fch-${ch}-min`);
-    const maxEl = document.getElementById(`fch-${ch}-max`);
-    const fill  = document.getElementById(`fch-${ch}-fill`);
+    const minEl  = document.getElementById(`fch-${ch}-min`);
+    const maxEl  = document.getElementById(`fch-${ch}-max`);
+    const fill   = document.getElementById(`fch-${ch}-fill`);
     const minVal = document.getElementById(`fch-${ch}-min-val`);
     const maxVal = document.getElementById(`fch-${ch}-max-val`);
 
@@ -636,6 +481,13 @@
     upd();
   });
 
+  function refreshFilterHints() {
+    CHANNEL_META.forEach(({ ch, nameKey }) => {
+      const nameEl = document.querySelector(`#fch-${ch} .fch-name`);
+      if (nameEl) nameEl.textContent = t(nameKey);
+    });
+  }
+
   // ── Coordinate helper ──
   function niceScaleKm(targetKm) {
     const opts = [0.1,0.2,0.5,1,2,5,10,20,50,100,200,500,1000];
@@ -645,16 +497,14 @@
   function updateCoordScale() {
     const res = state.nativeResolution; if (!res) return;
     const mPerBlock = res / state.coordScale;
-    coordBlockSize.textContent = `1 block = ${mPerBlock % 1 === 0 ? mPerBlock : mPerBlock.toFixed(2)} m`;
+    coordBlockSize.textContent = t('coords.block', mPerBlock % 1 === 0 ? mPerBlock : mPerBlock.toFixed(2));
     const totalKm = DETAIL_SIZE * res / 1000;
     const barKm = niceScaleKm(totalKm * 0.25);
     coordScaleFill.style.width = (barKm / totalKm * 100).toFixed(1) + '%';
     coordScaleLbl.textContent = barKm >= 1 ? `${barKm} km` : `${barKm * 1000} m`;
   }
 
-  function updateCoarseZoomLabel() {
-    coarseZoomLabel.textContent = `${state.coarseWindow * 2}×${state.coarseWindow * 2}`;
-  }
+  function updateCoarseZoomLabel() { coarseZoomLabel.textContent = `${state.coarseWindow * 2}×${state.coarseWindow * 2}`; }
 
   function setCoarseWindow(next) {
     const c = clamp(Math.round(next), COARSE_WINDOW_MIN, COARSE_WINDOW_MAX);
@@ -662,8 +512,10 @@
     state.coarseWindow = c; updateCoarseZoomLabel(); loadCoarse();
   }
 
+  let _lastDetailRC = null;
   function showDetailCoords(r, c) {
     if (state.detailCI === null || !state.detailRaw) return;
+    _lastDetailRC = { r, c };
     const { detailCI: ci, detailCJ: cj, detailPanI: pi, detailPanJ: pj, detailRaw } = state;
     const scale = state.coordScale;
     const centerI = ci * 256 + pi, centerJ = cj * 256 + pj;
@@ -673,21 +525,20 @@
     const tp = `/tp ${mcX} ~ ${mcZ}`;
     const elev = detailRaw.elev[r * detailRaw.w + c];
     const mcY = Math.round(elev * state.coordScale / state.nativeResolution);
-    coordRows.innerHTML = `<div class="coord-xyz"><div class="coord-xy-row"><span class="coord-xy-lbl">X</span><span class="coord-xy-val">${mcX.toLocaleString()}</span></div><div class="coord-xy-row"><span class="coord-xy-lbl">Y</span><span class="coord-xy-val">~${mcY}</span></div><div class="coord-xy-row"><span class="coord-xy-lbl">Z</span><span class="coord-xy-val">${mcZ.toLocaleString()}</span></div><div class="coord-xy-row" style="margin-top:2px"><span class="coord-xy-lbl">Elev</span><span class="coord-xy-val">${elev} m</span></div></div><div class="coord-tp" id="coord-tp-btn" title="Click to copy">${tp}</div>`;
+    coordRows.innerHTML = `<div class="coord-xyz"><div class="coord-xy-row"><span class="coord-xy-lbl">${t('coord.x')}</span><span class="coord-xy-val">${mcX.toLocaleString()}</span></div><div class="coord-xy-row"><span class="coord-xy-lbl">${t('coord.y')}</span><span class="coord-xy-val">~${mcY}</span></div><div class="coord-xy-row"><span class="coord-xy-lbl">${t('coord.z')}</span><span class="coord-xy-val">${mcZ.toLocaleString()}</span></div><div class="coord-xy-row" style="margin-top:2px"><span class="coord-xy-lbl">${t('coord.elev')}</span><span class="coord-xy-val">${elev} m</span></div></div><div class="coord-tp" id="coord-tp-btn" title="${t('coord.copy_title')}">${tp}</div>`;
     const btn = document.getElementById('coord-tp-btn');
     btn.addEventListener('click', () => {
       navigator.clipboard.writeText(tp).then(() => {
-        btn.classList.add('copied'); btn.textContent = 'Copied!';
+        btn.classList.add('copied'); btn.textContent = t('coord.copied');
         setTimeout(() => { btn.classList.remove('copied'); btn.textContent = tp; }, 1200);
       });
     });
   }
 
   // ── Debounce ──
-  let dt = null;
-  function debouncedLoadCoarse() { clearTimeout(dt); dt = setTimeout(loadCoarse, 300); }
+  let _dt = null;
+  function debouncedLoadCoarse() { clearTimeout(_dt); _dt = setTimeout(loadCoarse, 300); }
 
-  // ── URL builders ──
   function coarseUrl() {
     const { seed, channel, coarseOffsetI: oi, coarseOffsetJ: oj, coarseWindow: w } = state;
     const ci0 = oi - w, ci1 = oi + w, cj0 = oj - w, cj1 = oj + w;
@@ -727,7 +578,7 @@
     state.detailRaw = null; detailImg.style.display = 'block';
     detailImg.classList.add('loading'); detailSpinner.classList.add('active');
     detailPlaceholder.style.display = 'none'; detailImg.src = detailUrl();
-    detailInfo.textContent = `ci=${state.detailCI}, cj=${state.detailCJ} | pan=(${state.detailPanI},${state.detailPanJ})`;
+    updateDetailInfo();
   }
 
   async function loadDetailRaw() {
@@ -743,42 +594,40 @@
     } catch(_) {}
   }
 
-  // ── Image events ──
   coarseImg.onload = () => {
     coarseImg.classList.remove('loading'); coarseSpinner.classList.remove('active');
-    const { coarseOffsetI: oi, coarseOffsetJ: oj, coarseWindow: w } = state;
-    coarseInfo.textContent = `ci=[${oi-w}…${oi+w}], cj=[${oj-w}…${oj+w}]`;
-    updateTileMarker(); loadCoarseData();
+    updateCoarseInfo(); updateTileMarker(); loadCoarseData();
   };
-  coarseImg.onerror = () => { coarseImg.classList.remove('loading'); coarseSpinner.classList.remove('active'); statusBar.firstChild.textContent = 'Coarse map load error'; };
+  coarseImg.onerror = () => {
+    coarseImg.classList.remove('loading'); coarseSpinner.classList.remove('active');
+    statusBar.firstChild.textContent = t('status.coarse_error');
+  };
   detailImg.onload = () => { detailImg.classList.remove('loading'); detailSpinner.classList.remove('active'); loadDetailRaw(); };
-  detailImg.onerror = () => { detailImg.classList.remove('loading'); detailSpinner.classList.remove('active'); statusBar.firstChild.textContent = 'Detail map load error'; };
+  detailImg.onerror = () => {
+    detailImg.classList.remove('loading'); detailSpinner.classList.remove('active');
+    statusBar.firstChild.textContent = t('status.detail_error');
+  };
 
-  // ── Tile marker ──
   function updateTileMarker() {
     if (state.detailCI === null) { tileMarker.style.display = 'none'; return; }
     const { detailCI: dci, detailCJ: dcj, coarseOffsetI: oi, coarseOffsetJ: oj, coarseWindow: w } = state;
     const ci0 = oi - w, ci1 = oi + w, cj0 = oj - w, cj1 = oj + w;
     if (dci < ci0 || dci >= ci1 || dcj < cj0 || dcj >= cj1) { tileMarker.style.display = 'none'; return; }
-    const tI = ci1 - ci0, tJ = cj1 - cj0;
-    tileMarker.style.left   = ((dcj - cj0) / tJ * 100) + '%';
-    tileMarker.style.top    = ((dci - ci0) / tI * 100) + '%';
-    tileMarker.style.width  = (1 / tJ * 100) + '%';
-    tileMarker.style.height = (1 / tI * 100) + '%';
+    tileMarker.style.left   = ((dcj - cj0) / (cj1 - cj0) * 100) + '%';
+    tileMarker.style.top    = ((dci - ci0) / (ci1 - ci0) * 100) + '%';
+    tileMarker.style.width  = (1 / (cj1 - cj0) * 100) + '%';
+    tileMarker.style.height = (1 / (ci1 - ci0) * 100) + '%';
     tileMarker.style.display = 'block';
   }
 
-  // ── Tooltip ──
   function showTooltip(e, html) {
     tooltip.innerHTML = html; tooltip.style.display = 'block';
     const x = e.clientX + 18, y = e.clientY - tooltip.offsetHeight / 2;
     tooltip.style.left = Math.min(x, window.innerWidth - tooltip.offsetWidth - 8) + 'px';
     tooltip.style.top  = Math.max(8, Math.min(y, window.innerHeight - tooltip.offsetHeight - 8)) + 'px';
   }
-
   function hideTooltip() { tooltip.style.display = 'none'; }
 
-  // ── Coarse hover ──
   coarseImg.addEventListener('mousemove', e => {
     if (!state.coarseData) return;
     const { ci0, ci1, cj0, cj1, channels } = state.coarseData;
@@ -789,13 +638,13 @@
     if (row < 0 || row >= ci1 - ci0 || col < 0 || col >= cj1 - cj0) return;
     let html = `<div class="ht-coord">ci=${ci}, cj=${cj}</div>`;
     Object.entries(channels).forEach(([name, data]) => {
-      html += `<div class="ht-row"><span class="ht-label">${name}</span><span class="ht-val">${data[row][col].toFixed(1)}</span></div>`;
+      const lbl = t('channel.' + name, name);
+      html += `<div class="ht-row"><span class="ht-label">${lbl}</span><span class="ht-val">${data[row][col].toFixed(1)}</span></div>`;
     });
     showTooltip(e, html);
   });
   coarseImg.addEventListener('mouseleave', hideTooltip);
 
-  // ── Detail hover ──
   detailImg.addEventListener('mousemove', e => {
     if (!state.detailRaw) return;
     const { elev, temp, h, w } = state.detailRaw;
@@ -806,71 +655,57 @@
     const idx = row * w + col;
     const eVal = elev[idx];
     const mcY = state.nativeResolution ? Math.round(eVal * state.coordScale / state.nativeResolution) : eVal;
-    let html = `<div class="ht-coord">px(${row},${col})</div><div class="ht-row"><span class="ht-label">Elev</span><span class="ht-val">${eVal} m</span></div><div class="ht-row"><span class="ht-label">MC&nbsp;Y</span><span class="ht-val">~${mcY}</span></div>`;
-    if (temp) html += `<div class="ht-row"><span class="ht-label">Temp</span><span class="ht-val">${temp[idx].toFixed(2)}°</span></div>`;
+    let html = `<div class="ht-coord">${t('tooltip.px', row, col)}</div><div class="ht-row"><span class="ht-label">${t('tooltip.elev')}</span><span class="ht-val">${eVal} m</span></div><div class="ht-row"><span class="ht-label">${t('tooltip.mcy')}</span><span class="ht-val">~${mcY}</span></div>`;
+    if (temp) html += `<div class="ht-row"><span class="ht-label">${t('tooltip.temp')}</span><span class="ht-val">${temp[idx].toFixed(2)}°</span></div>`;
     showTooltip(e, html);
   });
   detailImg.addEventListener('mouseleave', hideTooltip);
 
-  // ── Click-drag pan ──
-  function addDragPan(container, img, onPan) {
+  // ── Drag pan ──
+  function addDragPan(container, onPan) {
     let dragging = false, sx = 0, sy = 0;
-    container.addEventListener('mousedown', e => {
-      dragging = true; sx = e.clientX; sy = e.clientY;
-      container.classList.add('grabbing');
-      e.preventDefault();
-    });
-    window.addEventListener('mousemove', e => {
-      if (!dragging) return;
-      const dx = e.clientX - sx, dy = e.clientY - sy;
-      if (Math.abs(dx) < 3 && Math.abs(dy) < 3) return;
-      onPan(-dx, -dy); sx = e.clientX; sy = e.clientY;
-    });
+    container.addEventListener('mousedown', e => { dragging = true; sx = e.clientX; sy = e.clientY; container.classList.add('grabbing'); e.preventDefault(); });
+    window.addEventListener('mousemove', e => { if (!dragging) return; const dx = e.clientX - sx, dy = e.clientY - sy; if (Math.abs(dx) < 3 && Math.abs(dy) < 3) return; onPan(-dx, -dy); sx = e.clientX; sy = e.clientY; });
     window.addEventListener('mouseup', () => { if (dragging) { dragging = false; coarseContainer.classList.remove('grabbing'); detailContainer.classList.remove('grabbing'); } });
   }
 
-  let _coarsePanAcc = { dx: 0, dy: 0 };
-  addDragPan(coarseContainer, coarseImg, (dx, dy) => {
-    const { coarseOffsetI: oi, coarseOffsetJ: oj, coarseWindow: w } = state;
-    _coarsePanAcc.dx += dx; _coarsePanAcc.dy += dy;
+  let _cpa = { dx: 0, dy: 0 };
+  addDragPan(coarseContainer, (dx, dy) => {
+    _cpa.dx += dx; _cpa.dy += dy;
     const rect = coarseImg.getBoundingClientRect();
-    const pxPerCI = rect.height / (w * 2);
-    const pxPerCJ = rect.width  / (w * 2);
-    if (Math.abs(_coarsePanAcc.dx) > pxPerCJ) { state.coarseOffsetJ -= Math.sign(_coarsePanAcc.dx); _coarsePanAcc.dx = 0; }
-    if (Math.abs(_coarsePanAcc.dy) > pxPerCI) { state.coarseOffsetI -= Math.sign(_coarsePanAcc.dy); _coarsePanAcc.dy = 0; }
+    const pxI = rect.height / (state.coarseWindow * 2), pxJ = rect.width / (state.coarseWindow * 2);
+    if (Math.abs(_cpa.dx) > pxJ) { state.coarseOffsetJ -= Math.sign(_cpa.dx); _cpa.dx = 0; }
+    if (Math.abs(_cpa.dy) > pxI) { state.coarseOffsetI -= Math.sign(_cpa.dy); _cpa.dy = 0; }
     loadCoarse();
   });
 
-  let _detailPanAcc = { dx: 0, dy: 0 };
-  addDragPan(detailContainer, detailImg, (dx, dy) => {
-    _detailPanAcc.dx += dx; _detailPanAcc.dy += dy;
-    const rect = detailImg.getBoundingClientRect();
-    const pxPer = rect.height / DETAIL_SIZE;
-    if (Math.abs(_detailPanAcc.dx) > pxPer) { state.detailPanJ -= Math.sign(_detailPanAcc.dx); _detailPanAcc.dx = 0; }
-    if (Math.abs(_detailPanAcc.dy) > pxPer) { state.detailPanI -= Math.sign(_detailPanAcc.dy); _detailPanAcc.dy = 0; }
+  let _dpa = { dx: 0, dy: 0 };
+  addDragPan(detailContainer, (dx, dy) => {
+    _dpa.dx += dx; _dpa.dy += dy;
+    const px = detailImg.getBoundingClientRect().height / DETAIL_SIZE;
+    if (Math.abs(_dpa.dx) > px) { state.detailPanJ -= Math.sign(_dpa.dx); _dpa.dx = 0; }
+    if (Math.abs(_dpa.dy) > px) { state.detailPanI -= Math.sign(_dpa.dy); _dpa.dy = 0; }
     loadDetail();
   });
 
-  // ── Coarse click → detail ──
-  let _coarseClickStart = { x: 0, y: 0 };
-  coarseImg.addEventListener('mousedown', e => { _coarseClickStart = { x: e.clientX, y: e.clientY }; });
+  let _cClick = { x: 0, y: 0 };
+  coarseImg.addEventListener('mousedown', e => { _cClick = { x: e.clientX, y: e.clientY }; });
   coarseImg.addEventListener('click', e => {
-    if (Math.abs(e.clientX - _coarseClickStart.x) > 4 || Math.abs(e.clientY - _coarseClickStart.y) > 4) return;
-    const { coarseOffsetI: oi, coarseOffsetJ: oj, coarseWindow: w } = state;
+    if (Math.abs(e.clientX - _cClick.x) > 4 || Math.abs(e.clientY - _cClick.y) > 4) return;
+    const { coarseWindow: w, coarseOffsetI: oi, coarseOffsetJ: oj } = state;
     const rect = coarseImg.getBoundingClientRect();
     state.detailCI = Math.floor((oi - w) + (e.clientY - rect.top) / rect.height * (w * 2));
     state.detailCJ = Math.floor((oj - w) + (e.clientX - rect.left) / rect.width * (w * 2));
     state.detailPanI = 0; state.detailPanJ = 0;
     updateTileMarker(); loadDetail();
-    statusBar.firstChild.textContent = `Tile ci=${state.detailCI}, cj=${state.detailCJ}`;
+    statusBar.firstChild.textContent = t('status.tile', state.detailCI, state.detailCJ);
   });
 
-  // ── Detail click → coords ──
-  let _detailClickStart = { x: 0, y: 0 };
-  detailImg.addEventListener('mousedown', e => { _detailClickStart = { x: e.clientX, y: e.clientY }; });
+  let _dClick = { x: 0, y: 0 };
+  detailImg.addEventListener('mousedown', e => { _dClick = { x: e.clientX, y: e.clientY }; });
   detailImg.addEventListener('click', e => {
     if (!state.detailRaw) return;
-    if (Math.abs(e.clientX - _detailClickStart.x) > 4 || Math.abs(e.clientY - _detailClickStart.y) > 4) return;
+    if (Math.abs(e.clientX - _dClick.x) > 4 || Math.abs(e.clientY - _dClick.y) > 4) return;
     const { h, w } = state.detailRaw;
     const rect = detailImg.getBoundingClientRect();
     const col = Math.floor((e.clientX - rect.left) / rect.width * w);
@@ -879,12 +714,11 @@
     showDetailCoords(row, col);
   });
 
-  // ── Channel buttons ──
   function buildChannelButtons(names) {
     channelButtons.innerHTML = '';
     names.forEach((name, i) => {
       const btn = document.createElement('button');
-      btn.textContent = name;
+      btn.textContent = t('channel.' + name, name);
       if (i === state.channel) btn.classList.add('active');
       btn.addEventListener('click', () => {
         state.channel = i;
@@ -895,8 +729,8 @@
     });
   }
 
-  // ── Detail mode ──
   ['relief','elevation','temperature'].forEach(mode => {
+    const modeKey = mode === 'relief' ? 'mode.relief' : (mode === 'elevation' ? 'mode.elev' : 'mode.temp');
     document.getElementById(`mode-${mode}`).addEventListener('click', () => {
       state.detailMode = mode;
       ['relief','elevation','temperature'].forEach(m => document.getElementById(`mode-${m}`).classList.toggle('active', m === mode));
@@ -904,14 +738,13 @@
     });
   });
 
-  // ── Seed ──
   btnSetSeed.addEventListener('click', async () => {
     const v = seedInput.value.trim(); if (!/^-?\d+$/.test(v)) return;
     const r = await fetch('/api/seed', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seed: v }) });
     const d = await r.json();
     state.seed = d.seed; seedDisplay.textContent = d.seed; seedInput.value = '';
     resetDetail(); loadCoarse();
-    statusBar.firstChild.textContent = `Seed set to ${d.seed}`;
+    statusBar.firstChild.textContent = t('status.seed_set', d.seed);
   });
 
   btnNewSeed.addEventListener('click', async () => {
@@ -919,20 +752,19 @@
     const d = await r.json();
     state.seed = d.seed; seedDisplay.textContent = d.seed;
     resetDetail(); loadCoarse();
-    statusBar.firstChild.textContent = `New seed: ${d.seed}`;
+    statusBar.firstChild.textContent = t('status.new_seed', d.seed);
   });
 
   function resetDetail() {
+    _lastDetailRC = null;
     state.detailCI = state.detailCJ = null; state.detailPanI = state.detailPanJ = 0;
     state.detailRaw = null; detailImg.style.display = 'none';
-    detailPlaceholder.style.display = ''; detailInfo.textContent = 'click coarse to load';
+    detailPlaceholder.style.display = ''; detailInfo.textContent = t('map.detail_info');
     tileMarker.style.display = 'none';
   }
 
-  // ── Filter toggle ──
   filterEnable.addEventListener('change', loadCoarse);
 
-  // ── Stats ──
   btnStats.addEventListener('click', async () => {
     const { coarseOffsetI: oi, coarseOffsetJ: oj, coarseWindow: w } = state;
     const r = await fetch(`/api/coarse_stats?ci0=${oi-w}&ci1=${oi+w}&cj0=${oj-w}&cj1=${oj+w}`);
@@ -948,10 +780,9 @@
       minEl.dispatchEvent(new Event('input'));
     });
     const parts = Object.values(data).map(s => `${s.name}: [${s.min}, ${s.max}]`);
-    statusBar.firstChild.textContent = 'Stats — ' + parts.join('  |  ');
+    statusBar.firstChild.textContent = t('status.stats', parts.join('  |  '));
   });
 
-  // ── Button pan ──
   document.getElementById('coarse-up').addEventListener('click',    () => { state.coarseOffsetI -= COARSE_PAN_STEP; loadCoarse(); });
   document.getElementById('coarse-down').addEventListener('click',  () => { state.coarseOffsetI += COARSE_PAN_STEP; loadCoarse(); });
   document.getElementById('coarse-left').addEventListener('click',  () => { state.coarseOffsetJ -= COARSE_PAN_STEP; loadCoarse(); });
@@ -964,17 +795,14 @@
   document.getElementById('detail-left').addEventListener('click',  () => { state.detailPanJ -= DETAIL_PAN_STEP; loadDetail(); });
   document.getElementById('detail-right').addEventListener('click', () => { state.detailPanJ += DETAIL_PAN_STEP; loadDetail(); });
 
-  // ── Mouse wheel zoom on coarse ──
   coarseContainer.addEventListener('wheel', e => {
     e.preventDefault();
     setCoarseWindow(state.coarseWindow * (e.deltaY < 0 ? 0.85 : 1.15));
   }, { passive: false });
 
-  // ── Keyboard shortcuts ──
   document.addEventListener('keydown', e => {
-    const t = e.target.tagName;
-    if (t === 'INPUT' || t === 'TEXTAREA') return;
-
+    const tgt = e.target.tagName;
+    if (tgt === 'INPUT' || tgt === 'TEXTAREA') return;
     switch (e.key.toLowerCase()) {
       case 'arrowup':    state.coarseOffsetI -= COARSE_PAN_STEP; loadCoarse(); e.preventDefault(); break;
       case 'arrowdown':  state.coarseOffsetI += COARSE_PAN_STEP; loadCoarse(); e.preventDefault(); break;
@@ -991,7 +819,6 @@
     }
   });
 
-  // ── Init ──
   async function init() {
     try {
       const r = await fetch('/api/status');
@@ -1000,13 +827,15 @@
       state.nativeResolution = d.native_resolution ?? state.nativeResolution;
       state.coordScale = d.scale || 1;
       seedDisplay.textContent = d.seed;
+      applyI18n();
       buildChannelButtons(d.channels);
       updateCoordScale(); updateCoarseZoomLabel();
-      statusBar.firstChild.textContent = `Seed ${d.seed}  |  scale ${d.scale}×`;
-      statusHint.textContent = 'Drag to pan  |  ←↑↓→  +/-  C/Z  W/A/S/D';
+      statusBar.firstChild.textContent = t('status.connected', d.seed, d.scale || 1);
+      statusHint.textContent = t('hint.shortcuts');
       loadCoarse();
     } catch (_) {
-      statusBar.firstChild.textContent = 'Connection failed — is the Minecraft client running?';
+      applyI18n();
+      statusBar.firstChild.textContent = t('status.connect_fail');
     }
   }
   init();
