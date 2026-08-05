@@ -17,14 +17,14 @@ Two orthogonal selectors: inference variant (`useDml`/`useCuda`/`useCpu`, mutual
 
 - Valid `mcTarget` values: 261 (26.1.2), 262 (26.2), 263 (26.3-snapshot-3), defined in `gradle.properties` as `mc261_*`/`mc262_*`/`mc263_*`; unknown values throw a GradleException.
 - Requires **JDK 25** (local: `C:\Program Files\Java\jdk-25.0.4`, set as user `JAVA_HOME`) and Gradle 9.5.1 wrapper. No yarn mappings — Minecraft 26.1+ is unobfuscated.
-- Version becomes `{mod_version}-{windows|cuda|cpu}+{minecraft_version}` (currently `3.0.0-...`).
+- Version becomes `{mod_version}-{windows|cuda|cpu}+{minecraft_version}` (currently `3.0.0-...`). The CUDA variant is a **single** build (ORT `onnxruntime_gpu` 1.28.0): the Maven Java GPU package always links **CUDA 12** runtime libs (`libcublasLt.so.12` etc.) — there is no CUDA 13 build on Maven Central. `CudaLibraryManager` auto-downloads and preloads those libs on Linux servers, so one jar covers CUDA 12 and CUDA 13 driver environments.
 - `processResources` depends on `generateModelAssetManifest`, which **queries the Hugging Face API at build time** (pinned commit `ad2df557eca5645f588766101cf3bc3682455c3e` of `xandergos/terrain-diffusion-30m-onnx`). Building offline fails.
 - `./gradlew pipelineTest` runs `PipelineTest.main` (JavaExec, `-Xmx8g`): downloads real models, generates one 256-block tile, fails if VRAM delta exceeds 2500 MB (measured via `nvidia-smi`). Not a JUnit test — there is no test framework in this repo.
 - `./gradlew runClient` for the dev client; sources jar via `-PwithSourcesJar=true`. All JavaExec tasks force `log4j2-dev.xml` from the repo root.
 
 ## CI / Release
 
-- `.github/workflows/release.yml` — pushing a `v*` tag builds all three inference variants (DML/CUDA/CPU) × all three MC targets (261/262/263, 9 jars) in a matrix on ubuntu-latest and publishes a GitHub Release with the jars (auto-generated release notes). Tag must be `v{mod_version}` matching `gradle.properties`, or the build fails. DML variant works on Linux runners because `libs/onnxruntime-dml.jar` ships in the repo.
+- `.github/workflows/release.yml` — pushing a `v*` tag builds the three inference variants (DML/CUDA/CPU) × two MC targets (261/262, 6 jars) in a matrix on ubuntu-latest and publishes a GitHub Release with the jars (auto-generated release notes). Tag must be `v{mod_version}` matching `gradle.properties`, or the build fails. DML variant works on Linux runners because `libs/onnxruntime-dml.jar` ships in the repo.
 
 ## Network (dev machine)
 
@@ -37,13 +37,14 @@ Two orthogonal selectors: inference variant (`useDml`/`useCuda`/`useCpu`, mutual
 
 ## Runtime model assets
 
-- ONNX models are **not in the repo**. On first launch they download (~2.5 GB) into `<game dir>/terrain-diffusion-models` and are SHA-256-validated against the manifest generated at build time (disable via `validate_model=false` in `config/terrain-diffusion-mc.properties`).
+- ONNX models are **not in the repo**. On first launch they download (~2.5 GB) into `<game dir>/terrain-diffusion-models` and are SHA-256-validated against the manifest generated at build time (disable via `validate_model=false` in `config/terrain-diffusion-next.properties`).
 - `libs/onnxruntime-dml.jar` is git-force-added even though `libs/` is gitignored — never delete it, and don't expect other files placed in `libs/` to show up in git.
 - `inference.device` is forced to `auto` on the CPU build (CoreML on macOS, CPU elsewhere).
+- **CUDA 12 runtime libraries** are not required on the host: when the CUDA EP fails to load on Linux/amd64 (missing `libcublasLt.so.12` etc.), `CudaLibraryManager` resolves NVIDIA wheels via each mirror's PEP 503 simple index (`download.cuda_mirrors`, default `pypi.org,pypi.tuna.tsinghua.edu.cn,mirrors.aliyun.com,mirrors.cloud.tencent.com,repo.huaweicloud.com,mirrors.ustc.edu.cn,mirrors.bfsu.edu.cn`; mirrors verified to serve cudart >= 12.9, older caches are skipped), extracts the `.so` files into `<model dir>/cuda-libs/` once (~1.5 GiB), symlinks them into a system dlopen directory so the provider resolves them with global visibility, and retries the CUDA session. If that still fails, `inference.fallback_cpu` (default true) falls back to CPU instead of failing startup.
 
 ## Architecture
 
-- `pipeline/` — the heavy lifting: `WorldPipeline` (3 stages: coarse 20-step DPM-Solver++, latent 2-step flow matching, decoder 1-step; tile-based with stride), `BiomeClassifier` (hand-written elevation + 4 climate vars → biome rules; README calls this the intended place to improve biome quality), `ModelAssetManager`, `PipelineModels` (shared model lifecycle), `SyntheticMapFactory` + `PortableRng`/`FastNoiseLite` (seeded synthetic prior). This code is MC-version-independent and was untouched by the 26.x port.
+- `pipeline/` — the heavy lifting: `WorldPipeline` (3 stages: coarse 20-step DPM-Solver++, latent 2-step flow matching, decoder 1-step; tile-based with stride), `BiomeClassifier` (hand-written elevation + 4 climate vars → biome rules; README calls this the intended place to improve biome quality), `ModelAssetManager`, `CudaLibraryManager` (auto CUDA 12 lib download/preload for Linux servers), `PipelineModels` (shared model lifecycle), `SyntheticMapFactory` + `PortableRng`/`FastNoiseLite` (seeded synthetic prior). This code is MC-version-independent and was untouched by the 26.x port.
 - `infinitetensor/` — custom streaming tile tensor library (`InfiniteTensor`, `MemoryTileStore` ~100 MB cache) decoupled from Minecraft; pipeline math lives here and in `pipeline/`.
 - `world/` — Minecraft integration: `TerrainDiffusionBiomeSource` and the density function (registered as codecs under `terrain_diffusion` in `TerrainDiffusionMc.onInitialize`); density function pulls tile heightmaps via `LocalTerrainProvider` (keyed by world seed); `WorldScaleManager` handles per-world scale 1..6; `HeightConverter` maps meters → Minecraft Y.
 - **DensityFunction value-range API diverges across 26.x**: `AbstractTerrainDiffusionDensityFunction` holds the shared logic (src/main); the version-specific subclass lives in `src/mc_263/java` (26.3, `range()` → `net.minecraft.util.Interval`) or `src/mc_legacy/java` (26.1/26.2, `minValue()`/`maxValue()`) — selected by `build.gradle:46` via `mcTarget`. Don't put shared logic in the variant directories.

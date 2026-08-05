@@ -63,6 +63,6 @@ AI 地形的核心是三阶段扩散管线（coarse 20 步 DPM-Solver++ → late
 - [RiverDetector.java](https://github.com/f1owkang/Terrain-Diffusion-Next/blob/mc26/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/RiverDetector.java)（D8 流向 + 汇流累积）与 [RiverCarver.java](https://github.com/f1owkang/Terrain-Diffusion-Next/blob/mc26/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/RiverCarver.java)（路径雕刻，移植自上游 PR #207）：hybrid 模式用 D8 在 halo 扩展窗口（64 原生像素）上算河网保证跨 tile 无缝，再沿路径雕刻出蓄水河道；`rivers.mode=carver` 可切回纯噪声雕刻
 - [TerrainShaping.java](https://github.com/f1owkang/Terrain-Diffusion-Next/blob/mc26/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/TerrainShaping.java) — 山脊与高原塑形（`terrain.ridges.*` / `terrain.plateau.*` 配置），在模型输出的高程上叠加手写塑形
 - [WonderGenerator.java](https://github.com/f1owkang/Terrain-Diffusion-Next/blob/mc26/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/WonderGenerator.java) — 稀有奇观（尖塔 / 火山口 / 桌山 / 石柱 / 峡谷），按生物群系门控、按世界种子确定性生成（`wonders.enabled` 配置）
-- 河流、塑形与奇观参数全部在 `config/terrain-diffusion-mc.properties` 的 `rivers.*` / `terrain.ridges.*` / `terrain.plateau.*` / `wonders.enabled` 配置，无需改代码
+- 河流、塑形与奇观参数全部在 `config/terrain-diffusion-next.properties` 的 `rivers.*` / `terrain.ridges.*` / `terrain.plateau.*` / `wonders.enabled` 配置，无需改代码
 
 地形多样性远超生物群系多样性，弥合这一差距是实打实的机会。希望有人能把它做到极致。

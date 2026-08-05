@@ -36,8 +36,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Ensures model assets exist locally and match the expected SHA-256 hashes.
  *
- * <p>Assets are downloaded from a pinned Hugging Face commit into the game directory:
- * {@code .minecraft/terrain-diffusion-models}.
+ * <p>Assets are downloaded from a pinned Hugging Face commit into:
+ * {@code mods/terrain-diffusion-next} (relative to game dir).
+ * This single directory holds all model weights, pipeline config, and cached data.
  */
 public final class ModelAssetManager {
     private static final Logger LOG = LoggerFactory.getLogger(ModelAssetManager.class);
@@ -53,7 +54,8 @@ public final class ModelAssetManager {
     private static final long SLOW_DOWNLOAD_MAX_DURATION_MS = 30_000L;
     private static final Path MODEL_DIRECTORY = FabricLoader.getInstance()
             .getGameDir()
-            .resolve("terrain-diffusion-models");
+            .resolve("mods")
+            .resolve("terrain-diffusion-next");
     private static final AtomicBoolean READY = new AtomicBoolean(false);
     private static final Gson GSON = new Gson();
     private static final Type MANIFEST_TYPE = new TypeToken<ModelAssetManifest>() {}.getType();
@@ -236,7 +238,7 @@ public final class ModelAssetManager {
         return "https://huggingface.co/" + manifest.repositorySlug + "/tree/" + manifest.revision;
     }
 
-    private static void copyWithProgress(
+    static void copyWithProgress(
             InputStream responseStream,
             OutputStream fileOutputStream,
             String fileName,
@@ -324,7 +326,7 @@ public final class ModelAssetManager {
         return hexBuilder.toString();
     }
 
-    private static String humanReadableBytes(long byteCount) {
+    static String humanReadableBytes(long byteCount) {
         if (byteCount < 1024L) {
             return byteCount + " B";
         }

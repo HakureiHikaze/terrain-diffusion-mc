@@ -164,7 +164,7 @@ public final class OnnxModel implements AutoCloseable {
             if ("CoreML".equals(resolvedInferenceProvider)) {
                 throw new OrtException(
                         "inference.offload_models=false is not supported with CoreML. " +
-                        "Set inference.offload_models=true in terrain-diffusion-mc.properties.");
+                        "Set inference.offload_models=true in terrain-diffusion-next.properties.");
             }
             this.gpuSession = env.createSession(modelBytes, sessionOptions);
             this.cpuSession = null;
@@ -295,23 +295,53 @@ public final class OnnxModel implements AutoCloseable {
         }
     }
 
+    private static void addCudaProvider(OrtSession.SessionOptions opts) throws OrtException {
+        OrtCUDAProviderOptions cudaOpts = new OrtCUDAProviderOptions(0);
+        // Only grow the BFC arena by exactly what is needed, never pre-allocate.
+        cudaOpts.add("arena_extend_strategy", "kSameAsRequested");
+        // Heuristic: fast startup, no exhaustive benchmarking, workspace-efficient.
+        cudaOpts.add("cudnn_conv_algo_search", "HEURISTIC");
+        cudaOpts.add("do_copy_in_default_stream", "1");
+        opts.addCUDA(cudaOpts);
+        cudaOpts.close();
+    }
+
+    private static void addDirectMLProvider(OrtSession.SessionOptions opts) throws OrtException {
+        opts.addDirectML(0);
+    }
+
+    private static void addCoreMLProvider(OrtSession.SessionOptions opts) throws OrtException {
+        // ENABLE_ON_SUBGRAPH: allow CoreML to handle partial graphs with CPU fallback
+        // for unsupported ops, maximising GPU utilisation without requiring full-graph support.
+        opts.addCoreML(EnumSet.of(CoreMLFlags.ENABLE_ON_SUBGRAPH));
+    }
+
     private static void addGpuProvider(OrtSession.SessionOptions opts) throws OrtException {
         boolean gpuRequired = "gpu".equals(TerrainDiffusionConfig.inferenceDevice());
         boolean added = false;
 
         try {
-            OrtCUDAProviderOptions cudaOpts = new OrtCUDAProviderOptions(0);
-            // Only grow the BFC arena by exactly what is needed, never pre-allocate.
-            cudaOpts.add("arena_extend_strategy", "kSameAsRequested");
-            // Heuristic: fast startup, no exhaustive benchmarking, workspace-efficient.
-            cudaOpts.add("cudnn_conv_algo_search", "HEURISTIC");
-            cudaOpts.add("do_copy_in_default_stream", "1");
-            opts.addCUDA(cudaOpts);
-            cudaOpts.close();
+            addCudaProvider(opts);
             added = true;
             setResolvedProviderOnce("CUDA");
         } catch (Throwable t) {
-            if (cudaWarnLoggedOnce.compareAndSet(false, true)) {
+            // On Linux servers the CUDA 12 runtime libraries are often missing entirely
+            // (the ONNX Runtime Java GPU package always links CUDA 12 libs). Try to fetch
+            // and preload them automatically before giving up on the CUDA provider.
+            if (CudaLibraryManager.ensureLoaded()) {
+                try {
+                    addCudaProvider(opts);
+                    added = true;
+                    setResolvedProviderOnce("CUDA");
+                } catch (Throwable retryFailure) {
+                    if (cudaWarnLoggedOnce.compareAndSet(false, true)) {
+                        LOG.warn("CUDA still unavailable after automatic library setup: {} - {}. " +
+                                        "This is expected if you are not using a CUDA build.",
+                                retryFailure.getClass().getSimpleName(), retryFailure.getMessage());
+                    }
+                }
+            }
+            if (!added && cudaWarnLoggedOnce.compareAndSet(false, true)) {
                 LOG.warn("CUDA not available: {} - {}. This is expected if you are not using a CUDA build.",
                         t.getClass().getSimpleName(), t.getMessage());
             }
@@ -319,7 +349,7 @@ public final class OnnxModel implements AutoCloseable {
 
         if (!added) {
             try {
-                opts.addDirectML(0);
+                addDirectMLProvider(opts);
                 added = true;
                 setResolvedProviderOnce("DirectML");
             } catch (Throwable t) {
@@ -332,9 +362,7 @@ public final class OnnxModel implements AutoCloseable {
 
         if (!added) {
             try {
-                // ENABLE_ON_SUBGRAPH: allow CoreML to handle partial graphs with CPU fallback
-                // for unsupported ops, maximising GPU utilisation without requiring full-graph support.
-                opts.addCoreML(EnumSet.of(CoreMLFlags.ENABLE_ON_SUBGRAPH));
+                addCoreMLProvider(opts);
                 added = true;
                 setResolvedProviderOnce("CoreML");
             } catch (Throwable t) {
@@ -345,9 +373,17 @@ public final class OnnxModel implements AutoCloseable {
             }
         }
         if (gpuRequired && !added) {
-            throw new OrtException(
-                    "inference.device=gpu but no GPU provider (CUDA, DirectML, CoreML) is available. " +
-                    "Use the appropriate build for your platform or set inference.device=cpu.");
+            if (TerrainDiffusionConfig.fallbackCpu()) {
+                setResolvedProviderOnce("CPU");
+                if (noGpuWarnLoggedOnce.compareAndSet(false, true)) {
+                    LOG.warn("inference.device=gpu but no GPU provider (CUDA, DirectML, CoreML) is available. " +
+                            "Falling back to CPU (inference.fallback_cpu=true). Set inference.device=cpu to silence this.");
+                }
+            } else {
+                throw new OrtException(
+                        "inference.device=gpu but no GPU provider (CUDA, DirectML, CoreML) is available. " +
+                        "Use the appropriate build for your platform or set inference.device=cpu.");
+            }
         }
         if (!added) {
             setResolvedProviderOnce("CPU");

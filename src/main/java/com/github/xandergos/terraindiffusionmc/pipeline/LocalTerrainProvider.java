@@ -274,22 +274,30 @@ public final class LocalTerrainProvider {
     private HeightmapData genHeightmap(CacheKey key, int i1, int j1, int i2, int j2) {
         int scale = WorldScaleManager.getCurrentScale();
         FutureTask<HeightmapData> task = new FutureTask<>(() -> {
-            long computedWindowCountBefore = pipeline.getTotalComputedWindowCount();
-            HeightmapData data = scale <= 1
-                    ? handle1x(i1, j1, i2, j2)
-                    : handleUpsampled(i1, j1, i2, j2, scale);
-            long computedWindowCountAfter = pipeline.getTotalComputedWindowCount();
+            try {
+                long computedWindowCountBefore = pipeline.getTotalComputedWindowCount();
+                HeightmapData data = scale <= 1
+                        ? handle1x(i1, j1, i2, j2)
+                        : handleUpsampled(i1, j1, i2, j2, scale);
+                long computedWindowCountAfter = pipeline.getTotalComputedWindowCount();
 
-            long newlyComputedWindowCount = computedWindowCountAfter - computedWindowCountBefore;
-            int regionWidth = j2 - j1;
-            int regionHeight = i2 - i1;
-            LOG.info(
-                    "Terrain Diffusion ({}) finished generating region {}x{} ({} newly computed windows)",
-                    OnnxModel.getResolvedInferenceProvider(), regionWidth, regionHeight, newlyComputedWindowCount);
-            CACHE.put(key, new CacheEntry(data, new AtomicLong(CACHE_CLOCK.incrementAndGet())));
-            evictLruTo(MAX_CACHE_SIZE);
-            PENDING.remove(key);
-            return data;
+                long newlyComputedWindowCount = computedWindowCountAfter - computedWindowCountBefore;
+                int regionWidth = j2 - j1;
+                int regionHeight = i2 - i1;
+                LOG.info(
+                        "Terrain Diffusion ({}) finished generating region {}x{} ({} newly computed windows)",
+                        OnnxModel.getResolvedInferenceProvider(), regionWidth, regionHeight, newlyComputedWindowCount);
+                CACHE.put(key, new CacheEntry(data, new AtomicLong(CACHE_CLOCK.incrementAndGet())));
+                evictLruTo(MAX_CACHE_SIZE);
+                PENDING.remove(key);
+                return data;
+            } catch (ArrayIndexOutOfBoundsException e) {
+                // The JVM omits the stack trace of repeated AIOOBE throws
+                // (OmitStackTraceInFastThrow); with -XX:-OmitStackTraceInFastThrow the
+                // exception carries the real trace, printed here with its line numbers.
+                LOG.error("AIOOBE while generating tile ({},{})-({},{}):", i1, j1, i2, j2, e);
+                throw e;
+            }
         });
         Future<HeightmapData> existing = PENDING.putIfAbsent(key, task);
         FutureTask<HeightmapData> toRun = (existing == null) ? task : (FutureTask<HeightmapData>) existing;
@@ -396,7 +404,10 @@ public final class LocalTerrainProvider {
             if ("hybrid".equals(TerrainDiffusionConfig.riverMode())) {
                 int halo = HYBRID_HALO_PIXELS;
                 float[] elevExt = pipeline.get(i1n - halo, j1n - halo, i2n + halo, j2n + halo, false)[0];
-                riverMask = carveRiversHybrid(elevOut, elevExt, halo, nH, nW, H, W, scale);
+                // nH/nW include the 2-pixel laplacian padding (i2p-i1p); the halo window
+                // elevExt has native size i2n-i1n, so pass that or carveRiversHybrid reads
+                // out of bounds (D8 flow over a too-large window).
+                riverMask = carveRiversHybrid(elevOut, elevExt, halo, i2n - i1n, j2n - j1n, H, W, scale);
             } else {
                 riverMask = RiverCarver.carve(elevOut, i1, j1, H, W, pixelSizeM, getSeed(),
                         TerrainDiffusionConfig.riverFrequency(),

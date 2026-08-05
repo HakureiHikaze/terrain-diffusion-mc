@@ -34,6 +34,10 @@ def modelRepositoryRevision = 'ad2df557eca5645f588766101cf3bc3682455c3e'
 def generatedManifestDirectory = layout.buildDirectory.dir('generated/model-assets').get().asFile
 def generatedManifestFile = new File(generatedManifestDirectory, 'model-assets-manifest.json')
 
+// The Maven Java GPU package of ONNX Runtime (even 1.28.0) links CUDA 12 runtime libraries
+// (libcublasLt.so.12 etc.); there is no CUDA 13 build on Maven Central. The mod auto-downloads
+// and preloads those libraries on Linux servers (see CudaLibraryManager), so a single CUDA
+// variant covers both CUDA 12 and CUDA 13 driver environments.
 def buildVariant = useCuda ? 'cuda' : useDml ? 'windows' : 'cpu'
 version = "${project.mod_version}-${buildVariant}+${minecraftVersion}"
 group = project.maven_group
@@ -87,11 +91,12 @@ dependencies {
     implementation "net.fabricmc.fabric-api:fabric-api:${fabricVersion}"
 
     if (useCuda) {
-        implementation "com.microsoft.onnxruntime:onnxruntime_gpu:1.20.0"
-        include "com.microsoft.onnxruntime:onnxruntime_gpu:1.20.0"
+        // Java GPU package always links CUDA 12 libs (see CudaLibraryManager), so one version serves all.
+        implementation "com.microsoft.onnxruntime:onnxruntime_gpu:1.28.0"
+        include "com.microsoft.onnxruntime:onnxruntime_gpu:1.28.0"
     } else if (useCpu) {
-        implementation "com.microsoft.onnxruntime:onnxruntime:1.20.0"
-        include "com.microsoft.onnxruntime:onnxruntime:1.20.0"
+        implementation "com.microsoft.onnxruntime:onnxruntime:1.28.0"
+        include "com.microsoft.onnxruntime:onnxruntime:1.28.0"
     } else if (useDml) {
         implementation 'com.microsoft.onnxruntime:onnxruntime-dml:1.0'
         include 'com.microsoft.onnxruntime:onnxruntime-dml:1.0'

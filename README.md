@@ -87,7 +87,7 @@
 
 ## 配置
 
-编辑 `config/terrain-diffusion-mc.properties`（首次启动自动创建，每条配置均含中英双语备注）：
+编辑 `config/terrain-diffusion-next.properties`（首次启动自动创建，每条配置均含中英双语备注）：
 
 ```
 inference.device=gpu           # 推理设备：cpu / gpu / auto（优先 GPU，失败回退 CPU）

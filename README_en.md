@@ -87,7 +87,7 @@ This mod targets Minecraft **26.x** (**26.1**, **26.2**, **26.3**). A single jar
 
 ## Configuration
 
-Edit `config/terrain-diffusion-mc.properties` (created automatically on first launch, with bilingual Chinese/English comments on every option):
+Edit `config/terrain-diffusion-next.properties` (created automatically on first launch, with bilingual Chinese/English comments on every option):
 
 ```
 inference.device=gpu           # Inference device: cpu / gpu / auto (try GPU first, fall back to CPU)

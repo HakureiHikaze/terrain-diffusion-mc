@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Properties;
 
 public final class TerrainDiffusionConfig {
-    private static final String FILE_NAME = "terrain-diffusion-mc.properties";
+    private static final String FILE_NAME = "terrain-diffusion-next.properties";
     private static final String RESOURCE_PATH = "/" + FILE_NAME;
     private static final Properties PROPERTIES = new Properties();
     private static final String BUILD_VARIANT = readBuildVariant();
@@ -47,6 +47,14 @@ public final class TerrainDiffusionConfig {
         return readBoolean("inference.offload_models", DEFAULT_OFFLOAD_MODELS);
     }
 
+    /**
+     * Whether to fall back to CPU when inference.device=gpu is requested but no GPU provider
+     * (CUDA, DirectML, CoreML) can be loaded. If false, startup fails instead.
+     */
+    public static boolean fallbackCpu() {
+        return readBoolean("inference.fallback_cpu", true);
+    }
+
     /** TCP port for the local terrain explorer HTTP server. */
     public static int explorerPort() {
         return readInt("explorer.port", DEFAULT_EXPLORER_PORT);
@@ -55,6 +63,17 @@ public final class TerrainDiffusionConfig {
     /** Whether to validate SHA-256 for pre-existing local model files before use. */
     public static boolean validateModel() {
         return readBoolean("validate_model", DEFAULT_VALIDATE_MODEL);
+    }
+
+    /**
+     * Whether to skip the 26.x server startup preload of a large spawn area around the world
+     * origin. That preload generates tens of thousands of diffusion tiles (each 6 s on a
+     * mid-range GPU) before the server becomes joinable; skipping it makes the server ready
+     * in about a minute and generates terrain on demand (the join-time spawn area is only
+     * 7x7 chunks, and the player's surroundings generate as they explore).
+     */
+    public static boolean skipInitialChunkPreload() {
+        return readBoolean("worldgen.skip_initial_chunk_preload", true);
     }
 
     /** Initial coarse-pixel radius for spawn land search (NxN region centered at origin). */
@@ -146,6 +165,25 @@ public final class TerrainDiffusionConfig {
             if (!trimmed.isEmpty()) result.add(trimmed);
         }
         if (result.isEmpty()) result.add("huggingface.co");
+        return result.toArray(new String[0]);
+    }
+
+    /**
+     * Comma-separated PyPI hosts for the automatic CUDA 12 runtime library download,
+     * tried in order until one succeeds. Used on Linux servers that are missing
+     * libcublasLt.so.12 etc. (the ONNX Runtime Java GPU package always links CUDA 12).
+     */
+    public static String[] cudaMirrors() {
+        String configured = readString("download.cuda_mirrors",
+                "pypi.org,pypi.tuna.tsinghua.edu.cn,mirrors.aliyun.com,mirrors.cloud.tencent.com,"
+                        + "repo.huaweicloud.com,mirrors.ustc.edu.cn,mirrors.bfsu.edu.cn");
+        String[] hosts = configured.split(",");
+        List<String> result = new ArrayList<>();
+        for (String host : hosts) {
+            String trimmed = host.trim();
+            if (!trimmed.isEmpty()) result.add(trimmed);
+        }
+        if (result.isEmpty()) result.add("pypi.org");
         return result.toArray(new String[0]);
     }
 

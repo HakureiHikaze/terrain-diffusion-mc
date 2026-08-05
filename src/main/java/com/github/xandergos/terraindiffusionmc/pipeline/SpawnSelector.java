@@ -76,9 +76,17 @@ public final class SpawnSelector {
      */
     private static int heightmapY(int blockX, int blockZ) {
         try {
+            // A 1x1 query would break the pipeline post-processing (biome classification and
+            // river carving need a neighborhood), so fetch the 256-block tile containing the
+            // point and read the local pixel from it. The tile is reused from the cache when
+            // the world generator already requested it.
+            int tileSize = 256;
+            int i1 = Math.floorDiv(blockZ, tileSize) * tileSize;
+            int j1 = Math.floorDiv(blockX, tileSize) * tileSize;
             LocalTerrainProvider.HeightmapData data =
-                    LocalTerrainProvider.getInstance().fetchHeightmap(blockZ, blockX, blockZ + 1, blockX + 1);
-            return Math.max(HeightConverter.convertToMinecraftHeight(data.heightmap[0][0]), 64);
+                    LocalTerrainProvider.getInstance().fetchHeightmap(i1, j1, i1 + tileSize, j1 + tileSize);
+            return Math.max(HeightConverter.convertToMinecraftHeight(
+                    data.heightmap[blockZ - i1][blockX - j1]), 64);
         } catch (Exception e) {
             LOG.error("SpawnSelector: failed to fetch heightmap at ({}, {})", blockX, blockZ, e);
             return 64;
