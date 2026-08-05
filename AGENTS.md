@@ -45,8 +45,27 @@ Two orthogonal selectors: inference variant (`useDml`/`useCuda`/`useCpu`, mutual
 - **DensityFunction value-range API diverges across 26.x**: `AbstractTerrainDiffusionDensityFunction` holds the shared logic (src/main); the version-specific subclass lives in `src/mc_263/java` (26.3, `range()` → `net.minecraft.util.Interval`) or `src/mc_legacy/java` (26.1/26.2, `minValue()`/`maxValue()`) — selected by `build.gradle:46` via `mcTarget`. Don't put shared logic in the variant directories.
 - `explorer/` — embedded HTTP server for the `/td-explore` web UI (port 19801; page at `src/main/resources/assets/.../explorer/index.html`).
 - Client "Customize" button works via `mixin/client/WorldCreationUiStateMixin` (26.x mechanism: inject a `PresetEditor` into `WorldCreationUiState#getPresetEditor` for the Terrain Diffusion world preset); `WorldScaleSettingsScreen` edits the overworld `dimension_type` and persists the scale via `WorldScaleSelectionState`/`WorldScaleSettingsState` (SavedData).
-- Datagen and client entrypoints exist but are empty; worldgen data lives in `src/main/resources/data/` (world preset, dimension types `terrain_diffusion_scale_1..6`, noise settings, biome/placed-feature overrides). 26.x `dimension_type` JSONs need `default_clock` + `has_ender_dragon_fight` fields, which the existing files now carry.
-- Worldgen data `data/minecraft/worldgen/biome/grove.json` overrides a vanilla biome — changes affect vanilla worlds too, not just Terrain Diffusion presets.
+- Datagen and client entrypoints exist but are empty; worldgen data lives in `src/main/resources/data/` (world preset, dimension types `terrain_diffusion_scale_1..6`, noise settings, biome/placed-feature overrides). 26.x `dimension_type` JSONs need `default_clock` + `has_ender_dragon_fight` + `straw_bed_rule` + `ambient_light_color` fields, which the existing files now carry.
+- Worldgen data `data/minecraft/worldgen/biome/grove.json` no longer overrides vanilla grove — the warm/treeless grove variant is now `terrain-diffusion-mc:grove` (biome ID 120), classified by `BiomeClassifier` as `CUSTOM_GROVE`.
+
+### Rivers
+
+- `RiverDetector` — D8 flow direction + flow accumulation, ported from upstream `postprocessing.py`. Used in hybrid mode to route river paths along the real elevation so rivers follow the terrain.
+- `RiverCarver` — deterministic channel carving, ported from upstream PR #207 (closed, MaybeJustJames). Two modes controlled by `rivers.mode`:
+  - **hybrid** (default): D8 paths on a 64-native-pixel halo-extended window (solves tile-boundary breaks), carved below sea level so channels hold water → terrain-following + water-holding
+  - **carver**: pure noise zero-contour carving as in the original PR #207
+- Integrated in `LocalTerrainProvider` (`carveRivers` dispatch, `carveRiversHybrid`) and explorer (`getPipelineData`).
+- Config: `rivers.enabled`, `rivers.mode`, `rivers.flow_threshold` (50), `rivers.carve_width` (1), `rivers.frequency`, `rivers.width`, `rivers.depth` (16), `rivers.max_altitude` (40) — all with bilingual comments in the default config.
+
+### Caves
+
+- Final density uses `minecraft:min(terrain_diffusion, cave_noise)` so cheese-cave voids appear underground (noise at y∈[-64,72)). Preliminary surface level stays as our terrain density so surface rules are unaffected.
+- `aquifers_enabled: true` and `ore_veins_enabled: true` with restored vanilla noise-router channels.
+
+### Model download
+
+- `ModelAssetManager` multi-source download: `download.mirrors` config (comma-separated Hugging Face hosts, default `huggingface.co,hf-mirror.com`), tried in order until one succeeds. Connect timeout 10s, request timeout 30s, slow-download detection (below `download.min_speed_kbps` for 30s), automatic mirror fallback.
+- `build.gradle` `generateModelAssetManifest` still queries HF API at build time — no mirror support for build-time yet.
 - `fabric.mod.json` declares `depends` on `"fabric-api"` (not `"fabric"`) and `"minecraft": ">=26.1"` (via `minecraft_dependency` property).
 
 ## Upstream references

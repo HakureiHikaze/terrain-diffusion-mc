@@ -28,6 +28,8 @@ public class TerrainDiffusionBiomeSource extends BiomeSource {
     private static final ResourceKey<Biome> TAIGA_SPARSE = ResourceKey.create(Registries.BIOME, Identifier.fromNamespaceAndPath("terrain-diffusion-mc", "taiga_sparse"));
     private static final ResourceKey<Biome> SNOWY_TAIGA_SPARSE = ResourceKey.create(Registries.BIOME, Identifier.fromNamespaceAndPath("terrain-diffusion-mc", "snowy_taiga_sparse"));
 
+    private static final ResourceKey<Biome> CUSTOM_GROVE = ResourceKey.create(Registries.BIOME, Identifier.fromNamespaceAndPath("terrain-diffusion-mc", "grove"));
+
     public static final MapCodec<TerrainDiffusionBiomeSource> CODEC = RecordCodecBuilder.mapCodec((instance) ->
             instance.group(
                     RegistryOps.retrieveGetter(Registries.BIOME)
@@ -76,7 +78,8 @@ public class TerrainDiffusionBiomeSource extends BiomeSource {
                     entry((short) 48, this.biomeLookup.getOrThrow(Biomes.FROZEN_OCEAN)),
                     entry((short) 108, this.biomeLookup.getOrThrow(FOREST_SPARSE)),
                     entry((short) 115, this.biomeLookup.getOrThrow(TAIGA_SPARSE)),
-                    entry((short) 116, this.biomeLookup.getOrThrow(SNOWY_TAIGA_SPARSE))
+                    entry((short) 116, this.biomeLookup.getOrThrow(SNOWY_TAIGA_SPARSE)),
+                    entry((short) 120, this.biomeLookup.getOrThrow(CUSTOM_GROVE))
             );
         }
     }

@@ -96,6 +96,15 @@ dependencies {
         implementation 'com.microsoft.onnxruntime:onnxruntime-dml:1.0'
         include 'com.microsoft.onnxruntime:onnxruntime-dml:1.0'
     }
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+test {
+    useJUnitPlatform()
+    jvmArgs '--add-opens=java.base/java.lang=ALL-UNNAMED',
+            '--add-opens=java.base/java.util=ALL-UNNAMED'
 }
 
 processResources {

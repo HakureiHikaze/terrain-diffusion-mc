@@ -4,8 +4,11 @@
   "version": "${version}",
   "name": "Terrain Diffusion Next",
   "description": "Terrain Diffusion Next - AI terrain generation in Minecraft (fork of terrain-diffusion-mc)",
-  "authors": [],
-  "contact": {},
+  "authors": ["f1owkang"],
+  "contact": {
+    "homepage": "https://github.com/f1owkang/Terrain-Diffusion-Next",
+    "issues": "https://github.com/f1owkang/Terrain-Diffusion-Next/issues"
+  },
   "license": "MIT",
   "icon": "assets/terrain-diffusion-mc/icon.png",
   "environment": "*",

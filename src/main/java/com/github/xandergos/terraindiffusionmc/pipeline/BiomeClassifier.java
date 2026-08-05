@@ -40,6 +40,7 @@ public final class BiomeClassifier {
     static final short WARM_OCEAN = 41, OCEAN = 44, COLD_OCEAN = 46, FROZEN_OCEAN = 48;
     static final short BEACH = 2, SNOWY_BEACH = 4, STONY_SHORE = 7;
     static final short FROZEN_RIVER = 11;
+    static final short CUSTOM_GROVE = 120;
     static final short FOREST_SPARSE = 108, TAIGA_SPARSE = 115, SNOWY_TAIGA_SPARSE = 116;
 
     /**
@@ -213,7 +214,7 @@ public final class BiomeClassifier {
                         else biome = SNOWY_TAIGA;
                     } else if (treesNone) {
                         if (barren) biome = WINDSWEPT_HILLS;
-                        else if (treeMoisture < 0.35f || precip < 350f) biome = GROVE;
+                        else if (treeMoisture < 0.35f || precip < 350f) biome = CUSTOM_GROVE;
                         else biome = PLAINS;
                     } else if (treesSparse || treesForest) {
                         biome = TAIGA_SPARSE;
@@ -228,8 +229,8 @@ public final class BiomeClassifier {
                         biome = (treesSparse || treesForest) ? SNOWY_TAIGA_SPARSE : SNOWY_TAIGA;
                     } else if (treesNone) {
                         if (warm || hot) biome = DESERT;
-                        else if (barren && !lowland && (cold || cool || temperate)) biome = GROVE;
-                        else if (treeMoisture < 0.35f || precip < 350f) biome = GROVE;
+                        else if (barren && !lowland && (cold || cool || temperate)) biome = CUSTOM_GROVE;
+                        else if (treeMoisture < 0.35f || precip < 350f) biome = CUSTOM_GROVE;
                         else biome = PLAINS;
                     } else if (treesSparse || treesForest) {
                         if (hot) biome = JUNGLE;

@@ -1,0 +1,86 @@
+package com.github.xandergos.terraindiffusionmc.pipeline;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+class BiomeClassifierTest {
+
+    @Test
+    void oceanBiomes() {
+        int H = 1, W = 4;
+        float pixelSizeM = 90f;
+        // Ocean (elev < 0) at different temperatures
+        float[] elev = {-10, -10, -10, -10};
+        float[] elevPadded = {-10,-10,-10,-10,-10,-10, -10,-10,-10,-10,-10,-10, -10,-10,-10,-10,-10,-10};
+        // Climate: [temp, t_season, precip, p_cv] x W
+        // 4 ocean: frozen (-10°C), cold (0°C), temperate (15°C), warm (30°C)
+        float[] climate = {
+            -10, 0, 15, 30,        // temp
+            200, 200, 200, 200,    // t_season
+            500, 500, 500, 500,    // precip
+            50, 50, 50, 50         // p_cv
+        };
+
+        short[] biomes = BiomeClassifier.classify(elev, climate, 0, 0, elevPadded, H, W, pixelSizeM);
+
+        assertEquals(BiomeClassifier.FROZEN_OCEAN, biomes[0]);
+        assertEquals(BiomeClassifier.COLD_OCEAN,   biomes[1]);
+        assertEquals(BiomeClassifier.OCEAN,         biomes[2]);
+        assertEquals(BiomeClassifier.WARM_OCEAN,    biomes[3]);
+    }
+
+    @Test
+    void desertBiome() {
+        int H = 1, W = 1;
+        float pixelSizeM = 90f;
+        float[] elev = {50};
+        float[] elevPadded = {50,50,50, 50,50,50, 50,50,50};
+        // Hot (30°C), low precip → desert
+        float[] climate = {30, 100, 50, 20};
+
+        short[] biomes = BiomeClassifier.classify(elev, climate, 0, 0, elevPadded, H, W, pixelSizeM);
+        assertEquals(BiomeClassifier.DESERT, biomes[0]);
+    }
+
+    @Test
+    void landBiomeNotOcean() {
+        int H = 1, W = 1;
+        float pixelSizeM = 90f;
+        float[] elev = {40};
+        float[] elevPadded = {40,40,40, 40,40,40, 40,40,40};
+        // Cool, moderate climate — should be some land biome (not ocean)
+        float[] climate = {8, 200, 300, 50};
+
+        short[] biomes = BiomeClassifier.classify(elev, climate, 0, 0, elevPadded, H, W, pixelSizeM);
+        // Not ocean (41, 44, 46, 48 are ocean biome IDs)
+        short b = biomes[0];
+        assertNotEquals(BiomeClassifier.FROZEN_OCEAN, b);
+        assertNotEquals(BiomeClassifier.COLD_OCEAN, b);
+        assertNotEquals(BiomeClassifier.OCEAN, b);
+        assertNotEquals(BiomeClassifier.WARM_OCEAN, b);
+    }
+
+    @Test
+    void nullClimateReturnsPlains() {
+        int H = 2, W = 2;
+        float[] elev = {10, 20, 30, 40};
+        float[] elevPadded = new float[16];
+        System.arraycopy(elev, 0, elevPadded, (1 * 4 + 1), 4);
+
+        short[] biomes = BiomeClassifier.classify(elev, null, 0, 0, elevPadded, H, W, 90f);
+        for (short b : biomes) assertEquals(BiomeClassifier.PLAINS, b);
+    }
+
+    @Test
+    void riverMaskOverridesBiome() {
+        int H = 1, W = 1;
+        float pixelSizeM = 90f;
+        float[] elev = {30};
+        float[] elevPadded = {30,30,30, 30,30,30, 30,30,30};
+        float[] climate = {15, 100, 600, 30};
+        boolean[] riverMask = {true};
+
+        short[] biomes = BiomeClassifier.classify(elev, climate, 0, 0, elevPadded, H, W, pixelSizeM, riverMask);
+        assertEquals(BiomeClassifier.RIVER, biomes[0]);
+    }
+}
