@@ -1,5 +1,10 @@
 # Terrain Diffusion Next
 
+[![Minecraft](https://img.shields.io/badge/Minecraft-26.x-brightgreen)](https://github.com/f1owkang/Terrain-Diffusion-Next/releases)
+[![Java](https://img.shields.io/badge/Java-25-orange)]()
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
+[![Contributors](https://img.shields.io/github/contributors/f1owkang/Terrain-Diffusion-Next)](https://github.com/f1owkang/Terrain-Diffusion-Next/graphs/contributors)
+
 **Terrain Diffusion Next** 是 [terrain-diffusion-mc](https://github.com/xandergos/terrain-diffusion-mc) 的独立 fork（面向 Minecraft 26.x），将 [Terrain Diffusion](https://github.com/xandergos/terrain-diffusion)（SIGGRAPH '26）扩散模型地形生成器集成进 Minecraft，并在此基础上扩展了水系、海滩、含水层、矿脉与原版结构支持。
 
 > 英文版： [README_en.md](README_en.md)
@@ -185,7 +190,20 @@ AI 地形的核心是三阶段扩散管线（coarse 20 步 DPM-Solver++ → late
 
 地形多样性远超生物群系多样性，弥合这一差距是实打实的机会。希望有人能把它做到极致。
 
-## 致谢
+## 贡献者
+
+本项目是 [terrain-diffusion-mc](https://github.com/xandergos/terrain-diffusion-mc) 的 fork，Terrain Diffusion 生态由以下贡献者共同打造（按贡献数排序）：
+
+<a href="https://github.com/xandergos"><img src="https://github.com/xandergos.png" width="50" height="50" alt="xandergos" title="xandergos" /></a>
+<a href="https://github.com/AirRunner"><img src="https://github.com/AirRunner.png" width="50" height="50" alt="AirRunner" title="AirRunner" /></a>
+<a href="https://github.com/ThatDamnWittyWhizHard"><img src="https://github.com/ThatDamnWittyWhizHard.png" width="50" height="50" alt="ThatDamnWittyWhizHard" title="ThatDamnWittyWhizHard" /></a>
+<a href="https://github.com/ayushsucksaf"><img src="https://github.com/ayushsucksaf.png" width="50" height="50" alt="ayushsucksaf" title="ayushsucksaf" /></a>
+<a href="https://github.com/BillGoldenWater"><img src="https://github.com/BillGoldenWater.png" width="50" height="50" alt="BillGoldenWater" title="BillGoldenWater" /></a>
+<a href="https://github.com/tlhr"><img src="https://github.com/tlhr.png" width="50" height="50" alt="tlhr" title="tlhr" /></a>
+<a href="https://github.com/deforcy"><img src="https://github.com/deforcy.png" width="50" height="50" alt="deforcy" title="deforcy" /></a>
+<a href="https://github.com/f1owkang"><img src="https://github.com/f1owkang.png" width="50" height="50" alt="f1owkang" title="f1owkang" /></a>
+
+### 上游项目
 
 - [Terrain Diffusion](https://github.com/xandergos/terrain-diffusion) — 扩散模型地形生成项目（SIGGRAPH '26 / InfiniteDiffusion）
 - [terrain-diffusion-mc](https://github.com/xandergos/terrain-diffusion-mc) — 本 fork 的上游 Mod 项目

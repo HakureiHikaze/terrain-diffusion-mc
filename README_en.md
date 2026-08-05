@@ -1,5 +1,10 @@
 # Terrain Diffusion Next
 
+[![Minecraft](https://img.shields.io/badge/Minecraft-26.x-brightgreen)](https://github.com/f1owkang/Terrain-Diffusion-Next/releases)
+[![Java](https://img.shields.io/badge/Java-25-orange)]()
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
+[![Contributors](https://img.shields.io/github/contributors/f1owkang/Terrain-Diffusion-Next)](https://github.com/f1owkang/Terrain-Diffusion-Next/graphs/contributors)
+
 **Terrain Diffusion Next** is an independent fork of [terrain-diffusion-mc](https://github.com/xandergos/terrain-diffusion-mc) (targeting Minecraft 26.x) that integrates the [Terrain Diffusion](https://github.com/xandergos/terrain-diffusion) (SIGGRAPH '26) diffusion-model terrain generator into Minecraft, and extends it with rivers, beaches, aquifers, ore veins and vanilla structure support.
 
 > 中文版： [README.md](README.md)
@@ -188,7 +193,20 @@ The core of the AI terrain is a three-stage diffusion pipeline (coarse 20-step D
 
 The terrain diversity far outpaces the biome diversity and there's a real opportunity to close that gap. I'm hoping someone goes crazy with it.
 
-## Credits
+## Contributors
+
+This project is a fork of [terrain-diffusion-mc](https://github.com/xandergos/terrain-diffusion-mc). The Terrain Diffusion ecosystem is built by the following contributors (sorted by contribution count):
+
+<a href="https://github.com/xandergos"><img src="https://github.com/xandergos.png" width="50" height="50" alt="xandergos" title="xandergos" /></a>
+<a href="https://github.com/AirRunner"><img src="https://github.com/AirRunner.png" width="50" height="50" alt="AirRunner" title="AirRunner" /></a>
+<a href="https://github.com/ThatDamnWittyWhizHard"><img src="https://github.com/ThatDamnWittyWhizHard.png" width="50" height="50" alt="ThatDamnWittyWhizHard" title="ThatDamnWittyWhizHard" /></a>
+<a href="https://github.com/ayushsucksaf"><img src="https://github.com/ayushsucksaf.png" width="50" height="50" alt="ayushsucksaf" title="ayushsucksaf" /></a>
+<a href="https://github.com/BillGoldenWater"><img src="https://github.com/BillGoldenWater.png" width="50" height="50" alt="BillGoldenWater" title="BillGoldenWater" /></a>
+<a href="https://github.com/tlhr"><img src="https://github.com/tlhr.png" width="50" height="50" alt="tlhr" title="tlhr" /></a>
+<a href="https://github.com/deforcy"><img src="https://github.com/deforcy.png" width="50" height="50" alt="deforcy" title="deforcy" /></a>
+<a href="https://github.com/f1owkang"><img src="https://github.com/f1owkang.png" width="50" height="50" alt="f1owkang" title="f1owkang" /></a>
+
+### Upstream projects
 
 - [Terrain Diffusion](https://github.com/xandergos/terrain-diffusion) — the diffusion-model terrain generator (SIGGRAPH '26 / InfiniteDiffusion)
 - [terrain-diffusion-mc](https://github.com/xandergos/terrain-diffusion-mc) — the upstream mod this project forks
