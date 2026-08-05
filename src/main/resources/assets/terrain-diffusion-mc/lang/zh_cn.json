@@ -1,0 +1,8 @@
+{
+  "generator.terrain-diffusion-mc.terrain_diffusion": "地形扩散·Next",
+  "terrain-diffusion-mc.world_settings.title": "地形设置",
+  "terrain-diffusion-mc.world_settings.open_button": "地形设置",
+  "terrain-diffusion-mc.world_settings.scale": "世界比例",
+  "terrain-diffusion-mc.world_settings.world_scale_description": "为这个世界设置世界比例。",
+  "terrain-diffusion-mc.world_settings.scale_error": "比例必须是 >= 1 的整数"
+}

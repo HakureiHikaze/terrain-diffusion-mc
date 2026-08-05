@@ -253,6 +253,13 @@ public final class LocalTerrainProvider {
         float[] climate  = out[1];
 
         short[] biomeFlat = BiomeClassifier.classify(elevFlat, climate, i1, j1, elevPadded, H, W, NATIVE_RESOLUTION);
+
+        // Detect rivers from native elevation and overlay on biome map
+        boolean[] rivers = RiverDetector.detectRivers(elevFlat, H, W, 50f, false);
+        for (int i = 0; i < rivers.length; i++) {
+            if (rivers[i]) biomeFlat[i] = BiomeClassifier.RIVER;
+        }
+
         return buildHeightmapData(elevFlat, biomeFlat, H, W);
     }
 
@@ -299,6 +306,14 @@ public final class LocalTerrainProvider {
         float[] elevOut = addElevationNoise(elevSmooth, elevPadded, i1, j1, H, W, pixelSizeM);
 
         short[] biomeFlat = BiomeClassifier.classify(elevSmooth, climate, i1, j1, elevPadded, H, W, pixelSizeM);
+
+        // Detect rivers at native resolution, upsample to output resolution
+        boolean[] riversNative = RiverDetector.detectRivers(elevNativeFlat, nH, nW, 50f, false);
+        boolean[] riversUp    = RiverDetector.upsampleRiverMask(riversNative, nW, nH, W, H, scale);
+        for (int i = 0; i < riversUp.length; i++) {
+            if (riversUp[i]) biomeFlat[i] = BiomeClassifier.RIVER;
+        }
+
         return buildHeightmapData(elevOut, biomeFlat, H, W);
     }
 

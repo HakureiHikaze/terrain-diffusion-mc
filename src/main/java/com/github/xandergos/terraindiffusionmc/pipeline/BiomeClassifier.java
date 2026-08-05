@@ -34,10 +34,11 @@ public final class BiomeClassifier {
 
     // Biome IDs
     static final short PLAINS = 1, SNOWY_PLAINS = 3, DESERT = 5, SWAMP = 6;
-    static final short FOREST = 8, TAIGA = 15, SNOWY_TAIGA = 16, SAVANNA = 17;
+    static final short FOREST = 8, RIVER = 9, TAIGA = 15, SNOWY_TAIGA = 16, SAVANNA = 17;
     static final short WINDSWEPT_HILLS = 19, JUNGLE = 23, BADLANDS = 26, MEADOW = 29;
     static final short GROVE = 31, SNOWY_SLOPES = 32, FROZEN_PEAKS = 33, STONY_PEAKS = 35;
     static final short WARM_OCEAN = 41, OCEAN = 44, COLD_OCEAN = 46, FROZEN_OCEAN = 48;
+    static final short BEACH = 2, SNOWY_BEACH = 4, STONY_SHORE = 7;
     static final short FOREST_SPARSE = 108, TAIGA_SPARSE = 115, SNOWY_TAIGA_SPARSE = 116;
 
     /**
@@ -88,6 +89,7 @@ public final class BiomeClassifier {
         float[] slopeRatio = computeSlopeRatio(elevPadded, H, W, pixelSizeM);
 
         // Process per-pixel
+        int PW = W + 2;
         for (int r = 0; r < H; r++) {
             for (int c = 0; c < W; c++) {
                 int idx = r * W + c;
@@ -173,7 +175,25 @@ public final class BiomeClassifier {
                     else if (cold) biome = COLD_OCEAN;
                     else if (warm || hot) biome = WARM_OCEAN;
                     else biome = OCEAN;
-                } else if (mountains) {
+                } else {
+                    boolean coastal = false;
+                    int pi = r + 1;
+                    int pj = c + 1;
+                    for (int dr = -1; dr <= 1 && !coastal; dr++) {
+                        for (int dc = -1; dc <= 1; dc++) {
+                            if (dr == 0 && dc == 0) continue;
+                            if (elevPadded[(pi + dr) * PW + (pj + dc)] < 0f) {
+                                coastal = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (coastal && elevVal < 8f) {
+                        if (hasSnow) biome = SNOWY_BEACH;
+                        else if (slope > 0.5f) biome = STONY_SHORE;
+                        else if (cold) biome = STONY_SHORE;
+                        else biome = BEACH;
+                    } else if (mountains) {
                     if (slopeBare) {
                         biome = hasSnow ? FROZEN_PEAKS : STONY_PEAKS;
                     } else if (hasSnow) {
@@ -217,6 +237,7 @@ public final class BiomeClassifier {
                         else if (cool || cold) biome = TAIGA;
                         else biome = FOREST;
                     }
+                }
                 }
 
                 // Bare slope override for lowland/non-mountain cliffs

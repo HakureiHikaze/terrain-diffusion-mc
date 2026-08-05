@@ -1,160 +1,171 @@
-# Terrain Diffusion Fabric Mod [[Modrinth]](https://modrinth.com/mod/terrain-diffusion)
+# Terrain Diffusion Next
 
-#### UPDATE: The research behind this mod has been accepted to SIGGRAPH 2026, the world's premier graphics conference! That means the research was officially peer reviewed and recognized as a significant contribution to the field. Enjoy the mod!
+**Terrain Diffusion Next** 是 [terrain-diffusion-mc](https://github.com/xandergos/terrain-diffusion-mc) 的独立 fork（面向 Minecraft 26.x），将 [Terrain Diffusion](https://github.com/xandergos/terrain-diffusion)（SIGGRAPH '26）扩散模型地形生成器集成进 Minecraft，并在此基础上扩展了水系、海滩、含水层、矿脉与原版结构支持。
 
-This is a Minecraft Fabric mod integrating [Terrain Diffusion](https://github.com/xandergos/terrain-diffusion).
+> 英文版： [README_en.md](README_en.md)
 
-## Which version should I use?
+## 与原版 fork 相比新增了什么
 
-Three builds are available on the [Releases](https://github.com/xandergos/terrain-diffusion-mc/releases) page:
+| 功能 | 说明 |
+|------|------|
+| **河流系统** | 移植上游 `postprocessing.py` 的 D8 水文算法（流向 + 汇流累积 + Priority-Flood 洼地填平）到 Java，从高程图计算河网，生成 `RIVER` 生物群系 |
+| **海滩生物群系** | 海岸带检测（陆地像素邻接海洋且近海平面），映射 `BEACH` / `SNOWY_BEACH` / `STONY_SHORE` |
+| **含水层** | 重新启用 `aquifers_enabled`，恢复 barrier / fluid_level / lava 四条原版 noise_router 通道，洞穴内出现水体与熔岩层 |
+| **矿脉** | 重新启用 `ore_veins_enabled`，恢复 vein 三条通道，生成大型铁矿/铜矿脉 |
+| **结构支持** | 为 3 个自定义生物群系（forest_sparse / taiga_sparse / snowy_taiga_sparse）补齐 biome tag，村庄、矿井、要塞等原版结构可在其区块生成 |
+| **界面本地化** | 新增简体中文语言文件，世界创建界面的"地形扩散·Next"世界类型与设置界面中文显示 |
 
-**The CPU build is slow unless you are on MacOS.**
+## 我应该用哪个版本？
 
-| Build                     | Supports                    | Setup required                          |
+[Releases](https://github.com/f1owkang/terrain-diffusion-mc/releases) 页面提供三种构建：
+
+**除非你在 MacOS 上，否则 CPU 构建很慢。**
+
+| 构建 | 支持环境 | 需要配置 |
 |---------------------------| --------------------------- | --------------------------------------- |
-| **Windows** (recommended) | Windows with any modern GPU | None                                    |
-| **CUDA**                  | NVIDIA GPUs                 | [CUDA + cuDNN install](CUDA_INSTALL.md) |
-| **CPU**                   | Everything else             | None                                    |
+| **Windows**（推荐） | 任意现代显卡的 Windows | 无 |
+| **CUDA** | NVIDIA 显卡 | [安装 CUDA + cuDNN](CUDA_INSTALL.md) |
+| **CPU** | 其他一切环境 | 无 |
 
-> **Mac users:** the CPU build automatically uses CoreML for hardware acceleration on Apple Silicon. No extra setup is needed.
+> **Mac 用户：** CPU 构建会在 Apple Silicon 上自动使用 CoreML 进行硬件加速，无需额外配置。
 
-Use the `-cuda` build only if you are on Linux, or have an NVIDIA GPU and prefer CUDA (may improve performance).
+只有当你使用 Linux，或拥有 NVIDIA 显卡且更偏好 CUDA（可能提升性能）时，才使用 `-cuda` 构建。
 
-## Supported Minecraft versions
+## 支持的 Minecraft 版本
 
-This mod targets Minecraft **26.x**:
-**26.1**, **26.2**, and **26.3**. A single jar declares compatibility with the whole `>=26.1`
-range, and the build can produce a jar against any specific target with
-`./gradlew build -PmcTarget=261|262|263` (or `./gradlew buildAllMc` for all three).
-Minecraft 26.x requires **Java 25**.
+本 Mod 面向 Minecraft **26.x**：**26.1**、**26.2** 和 **26.3**。单个 jar 声明兼容整个 `>=26.1` 范围，构建时可用
+`./gradlew build -PmcTarget=261|262|263` 针对任意特定版本产出 jar（或用 `./gradlew buildAllMc` 一次构建三个版本）。
+Minecraft 26.x 需要 **Java 25**。
 
-> For Minecraft 1.20.1 / 1.21.1 / 1.21.11 (the last obfuscated releases) use the older 2.x builds.
+> 对于 Minecraft 1.20.1 / 1.21.1 / 1.21.11（最后一批混淆版本），请使用上游的 2.x 构建。
 
-## Requirements
+## 版本状态
 
-- Minecraft with [Fabric](https://fabricmc.net/) and the [Fabric API Mod](https://modrinth.com/mod/fabric-api) installed
-- Windows with a GPU OR Linux with an NVIDIA GPU is strongly recommended. CPU inference works but is very slow.
-- VRAM (GPU RAM) needed: 1.5GB
-- RAM needed: 2.5GB (May need to increase Minecraft's RAM allocation)
+> **v3.0.0（当前）为早期开发版本**：Minecraft 26.x 移植版，河流、海滩、结构等新特性仍在持续迭代，可能存在 bug 与不完善之处，适合尝鲜与测试；需要稳定体验请使用上游 2.x 稳定版（Minecraft 1.20.1 / 1.21.1 / 1.21.11，Yarn 映射、Java 21）。
 
-## Usage
+## 环境要求
 
-**If using CUDA build:** First see [CUDA_INSTALL.md](CUDA_INSTALL.md).
+- 已安装 [Fabric](https://fabricmc.net/) 和 [Fabric API Mod](https://modrinth.com/mod/fabric-api) 的 Minecraft
+- 强烈推荐 Windows 带显卡，或 Linux 带 NVIDIA 显卡。CPU 推理可用但非常慢。
+- 显存（GPU 内存）需求：1.5GB
+- 内存需求：2.5GB（可能需要调高 Minecraft 的内存分配）
 
-1. Download the mod jar from [Releases](https://github.com/xandergos/terrain-diffusion-mc/releases) for your Minecraft version and place it in your Minecraft `mods/` folder. Make sure the Minecraft version matches.
-2. Launch Minecraft, at least once online to download the models (~2.5GB).
-3. Create a world, and select the **Terrain Diffusion** world type. Click **Customize** to set the `World Scale` (see [Per-world settings](#per-world-settings) below).
-4. The mod will search for a land spawn point near the world origin automatically. If the area around (0, 0) is entirely ocean, it may take a moment to find land. Use `/td-explore` (see below) to scout the world further.
+## 使用方法
 
-## Exploring the World
+**如果使用 CUDA 构建：** 请先阅读 [CUDA_INSTALL.md](CUDA_INSTALL.md)。
 
-The mod includes a built-in terrain explorer web UI. Run the `/td-explore` command in-game; it will print a clickable link (e.g. `http://localhost:19801`) that opens an interactive map in your browser. Click the map on the left to open a "detailed view". Click the detailed view to get coordinates in the bottom left. You can also filter for certain climates.
+1. 从 [Releases](https://github.com/f1owkang/terrain-diffusion-mc/releases) 下载与你的 Minecraft 版本匹配的 Mod jar，放入 `mods/` 文件夹。确保 Minecraft 版本一致。
+2. 启动 Minecraft，至少在线启动一次以自动下载模型（约 2.5GB）。
+3. 创建世界，选择 **地形扩散·Next**（Terrain Diffusion Next）世界类型。点击 **Customize** 设置 `World Scale`（见下方[每世界设置](#每世界设置)）。
+4. 本 Mod 会自动在世界原点附近寻找陆地出生点。如果 (0, 0) 附近全是海洋，可能需要一些时间寻找陆地。可使用 `/td-explore`（见下文）进一步侦察世界。
 
-Use the explorer to scout continents, mountains, islands, and other interesting terrain before venturing out in Minecraft.
+## 探索世界
 
-## Configuration
+Mod 内置了一个地形探索网页界面。在游戏内执行 `/td-explore` 命令，会打印一个可点击的链接（如 `http://localhost:19801`），在浏览器中打开交互式地图。点击左侧地图打开"详细视图"。点击详细视图可在左下角获得坐标。还可以按气候筛选。
 
-Edit `config/terrain-diffusion-mc.properties` (created automatically on first launch):
+用探索器提前侦察大陆、山脉、河流、岛屿和其他有趣地形，再动身出发。
+
+## 配置
+
+编辑 `config/terrain-diffusion-mc.properties`（首次启动时自动创建，含中英双备注）：
 
 ```
-# Terrain Diffusion MC configuration
-
 # Inference device: "cpu", "gpu", or "auto" (try GPU first then fall back to CPU).
-# "gpu" uses DirectML on the -windows build, or CUDA on the -cuda build.
-# GPU builds default to "gpu" so startup fails loudly if no GPU is detected.
-# CPU build defaults to "auto": uses CoreML on macOS, otherwise CPU.
+# 推理设备："cpu"、"gpu" 或 "auto"（优先尝试 GPU，失败后回退 CPU）。
 inference.device=gpu
 
-# Offload inactive models from VRAM between pipeline stages.
-# Keeps peak VRAM to ~1.5-2 GB. Set to false if you have ~2.5+ GB free for slightly
-# faster generation.
+# Offload inactive models from VRAM so only one model occupies the GPU at a time.
+# 将非活动模型移出显存，使 GPU 同一时刻只驻留一个模型。
 inference.offload_models=true
 
 # Validate SHA-256 for pre-existing files in .minecraft/terrain-diffusion-models.
-# Set to false if you want to provide custom models/config files without hash checks.
+# 对 .minecraft/terrain-diffusion-models 中已有的文件做 SHA-256 校验。
 validate_model=true
 
-# Port for the local terrain explorer web UI (/td-explore).
+# Port for the local terrain explorer web UI (started with /td-explore command).
+# 本地地形探索器网页界面的端口（通过 /td-explore 命令启动）。
 explorer.port=19801
 
-# Spawn search: coarse-pixel region sizes for finding a land spawn near (0, 0).
-# Starts at initial_size x initial_size and expands by 8 each step up to max_size x max_size.
-# Each coarse pixel covers a large area (hundreds of blocks), so 16–128 is typically sufficient.
+# Terrain generation region side length in blocks. Must be a power of 2.
+# 地形生成区域的边长（方块数）。必须是 2 的幂。
+tile_size=256
+
+# Spawn search: coarse-pixel region sizes for land detection near (0,0).
+# 出生点搜索：在 (0,0) 附近检测陆地的粗像素区域大小。
 spawn_search.initial_size=16
 spawn_search.max_size=128
 ```
 
-### Per-world settings
+### 每世界设置
 
-For Terrain Diffusion worlds, click **Customize** in world creation and set:
+对于地形扩散·Next 世界，在世界创建界面点击 **Customize**，设置：
 
-- `World Scale` (integer `1..6`)
+- `World Scale`（整数 `1..6`）
 
-This value is saved with the world save and affects:
+该值随存档一起保存，影响：
 
-- how many real-world meters each block represents (`scale=1` => `30m/block`, `scale=2` => `15m/block`, etc.)
-- world max height for newly created worlds (assumes tallest point is 10000 real-world meters)
-- 2 is recommended for a good balance of scale and playability. Use 1 for smaller, more compressed worlds.
-- Lower values put more stress on the GPU (Terrain Diffusion runs more often), while higher values put more stress on the CPU (larger world height). Most modern GPUs will be bottlenecked by the CPU around scale 2 or 3.
+- 每个方块代表多少真实世界米（`scale=1` 即 `30m/方块`，`scale=2` 即 `15m/方块`，依此类推）
+- 新创建世界的最大高度（假设最高点海拔 10000 真实米）
+- 2 是平衡尺度与可玩性的推荐值。想要更小、更紧凑的世界用 1。
+- 更小的值对 GPU 压力更大（地形扩散运行更频繁），更大的值对 CPU 压力更大（世界高度更高）。大多数现代 GPU 在 scale 2 或 3 时会成为 CPU 瓶颈。
 
-## Common Issues
+## 常见问题
 
-**A dynamic link library (DLL) initialization routine failed**
+**动态链接库（DLL）初始化例程失败**
 
-This can happen for some older Java versions. Minecraft 26.x requires Java 25 or higher. The [latest Microsoft OpenJDK 25](https://learn.microsoft.com/en-us/java/openjdk/download) version is known to work.
+某些旧版 Java 会出现此问题。Minecraft 26.x 需要 Java 25 或更高版本。已知 [最新版 Microsoft OpenJDK 25](https://learn.microsoft.com/en-us/java/openjdk/download) 可用。
 
-**LoadLibrary failed with error 126** *(CUDA build only)*
+**LoadLibrary failed with error 126** *（仅 CUDA 构建）*
 
-This is typically due to an improper CUDA or cuDNN installation. See [CUDA_INSTALL.md](CUDA_INSTALL.md) for troubleshooting steps.
+通常由 CUDA 或 cuDNN 安装不当导致。排查步骤见 [CUDA_INSTALL.md](CUDA_INSTALL.md)。
 
 **java.lang.IllegalStateException: Failed to load terrain-diffusion models**
 
-This typically indicates an "out of memory" error (the logs should show this as well).
-Terrain Diffusion's models take up about 2.5GB of RAM, so make sure to allocate enough RAM to account for this.
+通常表示内存不足（日志中也会显示）。Terrain Diffusion 的模型约占 2.5GB 内存，请确保为 Minecraft 分配了足够内存。
 
-**If your issue is still not resolved, please [raise it here](https://github.com/xandergos/terrain-diffusion-mc/issues/new).**
+**如果问题仍未解决，请[在此提交 issue](https://github.com/f1owkang/terrain-diffusion-mc/issues/new)。**
 
-## Building from Source
+## 从源码构建
 
-An internet connection is required during the build to fetch the pinned model manifest metadata from Hugging Face.
+构建过程需要联网，以从 Hugging Face 拉取固定的模型清单元数据。
 
-The `-windows` build requires `libs/onnxruntime-dml.jar`, which is provided as part of the repo. See [Building onnxruntime with DirectML](#building-onnxruntime-with-directml) to build from source. 
+`-windows` 构建需要 `libs/onnxruntime-dml.jar`，该文件随仓库提供。如需从源码构建，参见[用 DirectML 构建 onnxruntime](#用-directml-构建-onnxruntime)。
 
-Build for Windows (DirectML):
+为 Windows（DirectML）构建：
 ```
 ./gradlew build -PuseDml=true
 ```
 
-Build for CUDA:
+为 CUDA 构建：
 ```
 ./gradlew build -PuseCuda=true
 ```
 
-Build for CPU (also handles macOS/CoreML automatically):
+为 CPU 构建（自动适配 macOS/CoreML）：
 ```
 ./gradlew build -PuseCpu=true
 ```
 
-Build all:
+构建全部：
 ```
 ./gradlew buildAll
 ```
 
-### Building onnxruntime with DirectML
+### 用 DirectML 构建 onnxruntime
 
-**Requirements**
+**环境要求**
 
-- [Windows 10 SDK (10.0.17134.0)](https://developer.microsoft.com/en-us/windows/downloads/sdk-archive/index-legacy) — for Windows 10 version 1803 or newer
-- Visual Studio 2017 toolchain — install *Desktop development with C++* from the VS Installer
-- Visual Studio 2022 toolchain — same as above
-- Python 3.10+: [https://python.org/](https://python.org/)
-- CMake 3.28 or higher
+- [Windows 10 SDK (10.0.17134.0)](https://developer.microsoft.com/en-us/windows/downloads/sdk-archive/index-legacy) — 用于 Windows 10 1803 或更新版本
+- Visual Studio 2017 工具链 — 在 VS Installer 中安装 *Desktop development with C++*
+- Visual Studio 2022 工具链 — 同上
+- Python 3.10+：[https://python.org/](https://python.org/)
+- CMake 3.28 或更高版本
 
-Keep both VS toolchains up to date. Full details at the [ONNX Runtime build docs](https://onnxruntime.ai/docs/build/inferencing.html) and the [DirectML EP requirements](https://onnxruntime.ai/docs/execution-providers/DirectML-ExecutionProvider.html#build).
+两个 VS 工具链都要保持最新。完整细节见 [ONNX Runtime 构建文档](https://onnxruntime.ai/docs/build/inferencing.html) 和 [DirectML EP 要求](https://onnxruntime.ai/docs/execution-providers/DirectML-ExecutionProvider.html#build)。
 
-**Steps**
+**步骤**
 
-Run all commands from the **Developer Command Prompt for VS 2022**.
+所有命令都在 **VS 2022 的 Developer Command Prompt** 中运行。
 
 ```
 git clone --recursive https://github.com/Microsoft/onnxruntime.git
@@ -162,10 +173,20 @@ cd onnxruntime
 .\build.bat --config RelWithDebInfo --build_shared_lib --parallel --compile_no_warning_as_error --skip_submodule_sync --use_dml --build_java --build
 ```
 
-The built jar appears in `java/build/`. Rename it to `onnxruntime-dml.jar` and place it in `libs/` in this repository.
+构建出的 jar 位于 `java/build/`。将其重命名为 `onnxruntime-dml.jar` 并放入本仓库的 `libs/` 目录。
 
-## Note For Mod Developers
+## 给 Mod 开发者的说明
 
-While modifying the AI terrain itself is quite complex, the integration with Minecraft biomes is extremely simple. The model outputs elevation + 4 climate variables, and this is converted to Minecraft biomes with hand-written rules. This is the most immediate way to improve the quality of the terrain and is relatively easy, but takes time to get realistic. The entire biome classifier is [only 250 lines](https://github.com/xandergos/terrain-diffusion-mc/blob/master/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/BiomeClassifier.java).
+AI 地形的核心是三阶段扩散管线（coarse 20 步 DPM-Solver++ → latent 2 步 flow matching → decoder 1 步），模型输出高程 + 气候变量；与 Minecraft 的集成全靠手写规则。
 
-The terrain diversity far outpaces the biome diversity and there's a real opportunity to close that gap. I'm hoping someone goes crazy with it.
+- [BiomeClassifier.java](https://github.com/f1owkang/terrain-diffusion-mc/blob/mc26/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/BiomeClassifier.java)（约 290 行）——高程 + 4 气候变量 → 生物群系规则，含海岸带检测（海滩）
+- [RiverDetector.java](https://github.com/f1owkang/terrain-diffusion-mc/blob/mc26/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/RiverDetector.java)（新文件）——D8 流向 / 汇流累积 / Priority-Flood 洼地填平的 Java 移植，河流生成逻辑所在
+- 河流汇流阈值目前在 `LocalTerrainProvider` 中硬编码为 `50f`（原生像素单位），调小出更多小河，调大只保留大河
+
+地形多样性远超生物群系多样性，弥合这一差距是实打实的机会。希望有人能把它做到极致。
+
+## 致谢
+
+- [Terrain Diffusion](https://github.com/xandergos/terrain-diffusion) — 扩散模型地形生成项目（SIGGRAPH '26 / InfiniteDiffusion）
+- [terrain-diffusion-mc](https://github.com/xandergos/terrain-diffusion-mc) — 本 fork 的上游 Mod 项目
+- [infinite-tensor](https://github.com/xandergos/infinite-tensor) — 流式 tile 张量库
