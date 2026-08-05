@@ -69,6 +69,7 @@ public class TerrainDiffusionBiomeSource extends BiomeSource {
                     entry((short) 4,  this.biomeLookup.getOrThrow(Biomes.SNOWY_BEACH)),
                     entry((short) 7,  this.biomeLookup.getOrThrow(Biomes.STONY_SHORE)),
                     entry((short) 9,  this.biomeLookup.getOrThrow(Biomes.RIVER)),
+                    entry((short) 11, this.biomeLookup.getOrThrow(Biomes.FROZEN_RIVER)),
                     entry((short) 41, this.biomeLookup.getOrThrow(Biomes.WARM_OCEAN)),
                     entry((short) 44, this.biomeLookup.getOrThrow(Biomes.OCEAN)),
                     entry((short) 46, this.biomeLookup.getOrThrow(Biomes.COLD_OCEAN)),

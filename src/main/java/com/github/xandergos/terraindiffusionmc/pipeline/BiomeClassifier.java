@@ -39,6 +39,7 @@ public final class BiomeClassifier {
     static final short GROVE = 31, SNOWY_SLOPES = 32, FROZEN_PEAKS = 33, STONY_PEAKS = 35;
     static final short WARM_OCEAN = 41, OCEAN = 44, COLD_OCEAN = 46, FROZEN_OCEAN = 48;
     static final short BEACH = 2, SNOWY_BEACH = 4, STONY_SHORE = 7;
+    static final short FROZEN_RIVER = 11;
     static final short FOREST_SPARSE = 108, TAIGA_SPARSE = 115, SNOWY_TAIGA_SPARSE = 116;
 
     /**
@@ -56,6 +57,16 @@ public final class BiomeClassifier {
      */
     public static short[] classify(float[] elev, float[] climate, int i0, int j0,
                                     float[] elevPadded, int H, int W, float pixelSizeM) {
+        return classify(elev, climate, i0, j0, elevPadded, H, W, pixelSizeM, null);
+    }
+
+    /**
+     * Variant that overrides carved river blocks (see {@link RiverCarver}) with a river biome.
+     *
+     * @param riverMask per-pixel mask, {@code true} where the block was carved into a river; may be null
+     */
+    public static short[] classify(float[] elev, float[] climate, int i0, int j0,
+                                    float[] elevPadded, int H, int W, float pixelSizeM, boolean[] riverMask) {
         short[] out = new short[H * W];
         for (int i = 0; i < H * W; i++) out[i] = PLAINS;
 
@@ -243,6 +254,11 @@ public final class BiomeClassifier {
                 // Bare slope override for lowland/non-mountain cliffs
                 if (slopeBare && !isOcean && !mountains) {
                     biome = hasSnow ? FROZEN_PEAKS : STONY_PEAKS;
+                }
+
+                // Carved river channels read as rivers, not ocean.
+                if (riverMask != null && riverMask[idx]) {
+                    biome = frozen ? FROZEN_RIVER : RIVER;
                 }
 
                 out[idx] = biome;

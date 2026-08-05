@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 public final class TerrainDiffusionConfig {
@@ -75,6 +77,62 @@ public final class TerrainDiffusionConfig {
         return configuredTileSize;
     }
 
+    /** Whether to carve winding river channels into the terrain (integration-layer overlay). */
+    public static boolean riversEnabled() {
+        return readBoolean("rivers.enabled", true);
+    }
+
+    /** River-network noise frequency per metre. Lower spreads rivers further apart. */
+    public static float riverFrequency() {
+        return readFloat("rivers.frequency", 0.00035f);
+    }
+
+    /** Half-width of a river channel in noise units. Larger makes rivers wider. */
+    public static float riverWidth() {
+        return readFloat("rivers.width", 0.045f);
+    }
+
+    /**
+     * Depth (metres below sea level) cut at a river's centre-line. The mod compresses below-sea
+     * level depth, so ~16 m yields a channel a few blocks deep (deep enough to read as a river).
+     */
+    public static float riverDepth() {
+        return readFloat("rivers.depth", 16f);
+    }
+
+    /**
+     * Rivers are only carved into terrain below this elevation (metres). Channels reach below sea
+     * level so they hold water; capping the altitude keeps them as valleys rather than deep canyons.
+     */
+    public static float riverMaxAltitude() {
+        return readFloat("rivers.max_altitude", 40f);
+    }
+
+    /**
+     * Comma-separated Hugging Face hosts for model downloads, tried in order until one succeeds.
+     * Falls back to mirrors automatically when the official host fails.
+     */
+    public static String[] downloadMirrors() {
+        String configured = readString("download.mirrors", "huggingface.co,hf-mirror.com");
+        String[] hosts = configured.split(",");
+        List<String> result = new ArrayList<>();
+        for (String host : hosts) {
+            String trimmed = host.trim();
+            if (!trimmed.isEmpty()) result.add(trimmed);
+        }
+        if (result.isEmpty()) result.add("huggingface.co");
+        return result.toArray(new String[0]);
+    }
+
+    /**
+     * Minimum download speed in KB/s. If the download stays below this for 30 seconds,
+     * the current mirror source is abandoned and the next one is tried. 0 disables the check.
+     */
+    public static double minDownloadSpeedKbps() {
+        double speed = readDouble("download.min_speed_kbps", 100.0);
+        return Math.max(0.0, speed);
+    }
+
     private static void loadDefaults() {
         boolean loadedFromResource = false;
         try (InputStream in = TerrainDiffusionConfig.class.getResourceAsStream(RESOURCE_PATH)) {
@@ -139,6 +197,28 @@ public final class TerrainDiffusionConfig {
     private static boolean readBoolean(String key, boolean defaultValue) {
         String value = PROPERTIES.getProperty(key);
         return value != null ? Boolean.parseBoolean(value.trim()) : defaultValue;
+    }
+
+    private static double readDouble(String key, double defaultValue) {
+        String value = PROPERTIES.getProperty(key);
+        if (value == null) return defaultValue;
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException e) {
+            System.err.println("Invalid double for " + key + ": " + value + ", using default " + defaultValue);
+            return defaultValue;
+        }
+    }
+
+    private static float readFloat(String key, float defaultValue) {
+        String value = PROPERTIES.getProperty(key);
+        if (value == null) return defaultValue;
+        try {
+            return Float.parseFloat(value.trim());
+        } catch (NumberFormatException e) {
+            System.err.println("Invalid float for " + key + ": " + value + ", using default " + defaultValue);
+            return defaultValue;
+        }
     }
 
     private static int readInt(String key, int defaultValue) {

@@ -16,6 +16,7 @@ import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -27,6 +28,7 @@ import java.nio.file.StandardCopyOption;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -41,6 +43,14 @@ public final class ModelAssetManager {
     private static final Logger LOG = LoggerFactory.getLogger(ModelAssetManager.class);
     private static final String MANIFEST_RESOURCE_PATH = "/model-assets-manifest.json";
     private static final long PROGRESS_LOG_THRESHOLD_BYTES = 100L * 1024L * 1024L;
+    /** Connect timeout per mirror source (seconds). */
+    private static final int CONNECT_TIMEOUT_SECONDS = 10;
+    /** Timeout to receive the HTTP response headers (seconds). */
+    private static final int REQUEST_TIMEOUT_SECONDS = 30;
+    /** How often download speed is sampled (milliseconds). */
+    private static final long SPEED_CHECK_INTERVAL_MS = 5_000L;
+    /** How long the download may stay below the minimum speed before switching sources (milliseconds). */
+    private static final long SLOW_DOWNLOAD_MAX_DURATION_MS = 30_000L;
     private static final Path MODEL_DIRECTORY = FabricLoader.getInstance()
             .getGameDir()
             .resolve("terrain-diffusion-models");
@@ -117,47 +127,82 @@ public final class ModelAssetManager {
 
     private static void downloadAndVerifyAsset(Path localAssetPath, ManifestAsset assetMetadata, String revision, String offlineHelpUrl) throws IOException, InterruptedException {
         Path temporaryAssetPath = localAssetPath.resolveSibling(localAssetPath.getFileName() + ".tmp");
-        HttpClient httpClient = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
-        HttpRequest request = HttpRequest.newBuilder(URI.create(assetMetadata.url)).GET().build();
+        String[] mirrorHosts = TerrainDiffusionConfig.downloadMirrors();
+        Exception lastFailure = null;
+        boolean anyOffline = false;
 
-        try {
-            LOG.info("Downloading model asset '{}' ({})",
-                    localAssetPath.getFileName(), humanReadableBytes(assetMetadata.sizeBytes));
-            HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
-            int statusCode = response.statusCode();
-            if (statusCode < HttpURLConnection.HTTP_OK || statusCode >= HttpURLConnection.HTTP_MULT_CHOICE) {
-                throw new IllegalStateException("Failed to download model asset from " + assetMetadata.url + " (HTTP " + statusCode + ")");
-            }
-
-            try (InputStream responseStream = response.body();
-                 OutputStream fileOutputStream = Files.newOutputStream(temporaryAssetPath)) {
-                copyWithProgress(responseStream, fileOutputStream, localAssetPath.getFileName().toString(), assetMetadata.sizeBytes);
-            }
-
-            String downloadedHash = sha256Hex(temporaryAssetPath);
-            if (!downloadedHash.equalsIgnoreCase(assetMetadata.sha256)) {
+        for (String mirrorHost : mirrorHosts) {
+            String assetUrl = rewriteHost(assetMetadata.url, mirrorHost);
+            try {
+                attemptSingleDownload(localAssetPath, temporaryAssetPath, assetMetadata, assetUrl);
+                LOG.info("Downloaded and verified model asset '{}' from {}", localAssetPath.getFileName(), assetUrl);
+                return;
+            } catch (InterruptedException interruptedException) {
                 Files.deleteIfExists(temporaryAssetPath);
-                throw new IllegalStateException("SHA-256 mismatch for " + localAssetPath.getFileName()
-                        + ". Expected " + assetMetadata.sha256 + " but got " + downloadedHash);
-            }
-            Files.move(temporaryAssetPath, localAssetPath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            LOG.info("Downloaded and verified model asset '{}'", localAssetPath.getFileName());
-        } catch (Exception exception) {
-            Files.deleteIfExists(temporaryAssetPath);
-            if (isOfflineError(exception)) {
-                throw new IllegalStateException(
-                        "Terrain Diffusion models are missing and must be downloaded while online. " +
-                                "Connect to the internet and restart Minecraft. Direct download: " + offlineHelpUrl +
-                                " (revision " + revision + ")",
-                        exception);
-            }
-            if (exception instanceof IOException ioException) {
-                throw ioException;
-            }
-            if (exception instanceof InterruptedException interruptedException) {
                 throw interruptedException;
+            } catch (Exception exception) {
+                Files.deleteIfExists(temporaryAssetPath);
+                if (isOfflineError(exception)) {
+                    anyOffline = true;
+                }
+                lastFailure = exception;
+                if (mirrorHosts.length > 1) {
+                    LOG.warn("Download of '{}' from {} failed: {}. Switching to next mirror source...",
+                            localAssetPath.getFileName(), assetUrl, exception.getMessage());
+                }
             }
-            throw new IllegalStateException("Failed downloading model asset: " + localAssetPath.getFileName(), exception);
+        }
+
+        if (anyOffline) {
+            throw new IllegalStateException(
+                    "Terrain Diffusion models are missing and must be downloaded while online. " +
+                            "Connect to the internet and restart Minecraft. Direct download: " + offlineHelpUrl +
+                            " (revision " + revision + ")",
+                    lastFailure);
+        }
+        throw new IllegalStateException("Failed downloading model asset: " + localAssetPath.getFileName(), lastFailure);
+    }
+
+    private static void attemptSingleDownload(Path localAssetPath, Path temporaryAssetPath, ManifestAsset assetMetadata, String assetUrl) throws IOException, InterruptedException {
+        HttpClient httpClient = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .connectTimeout(Duration.ofSeconds(CONNECT_TIMEOUT_SECONDS))
+                .build();
+        HttpRequest request = HttpRequest.newBuilder(URI.create(assetUrl))
+                .timeout(Duration.ofSeconds(REQUEST_TIMEOUT_SECONDS))
+                .GET()
+                .build();
+
+        LOG.info("Downloading model asset '{}' ({}) from {}",
+                localAssetPath.getFileName(), humanReadableBytes(assetMetadata.sizeBytes), assetUrl);
+        HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+        int statusCode = response.statusCode();
+        if (statusCode < HttpURLConnection.HTTP_OK || statusCode >= HttpURLConnection.HTTP_MULT_CHOICE) {
+            throw new IllegalStateException("Failed to download model asset from " + assetUrl + " (HTTP " + statusCode + ")");
+        }
+
+        try (InputStream responseStream = response.body();
+             OutputStream fileOutputStream = Files.newOutputStream(temporaryAssetPath)) {
+            copyWithProgress(responseStream, fileOutputStream, localAssetPath.getFileName().toString(),
+                    assetMetadata.sizeBytes, TerrainDiffusionConfig.minDownloadSpeedKbps());
+        }
+
+        String downloadedHash = sha256Hex(temporaryAssetPath);
+        if (!downloadedHash.equalsIgnoreCase(assetMetadata.sha256)) {
+            Files.deleteIfExists(temporaryAssetPath);
+            throw new IllegalStateException("SHA-256 mismatch for " + localAssetPath.getFileName()
+                    + " from " + assetUrl + ". Expected " + assetMetadata.sha256 + " but got " + downloadedHash);
+        }
+        Files.move(temporaryAssetPath, localAssetPath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+    }
+
+    /** Replaces the host of a Hugging Face resolve URL with the given mirror host. */
+    private static String rewriteHost(String url, String newHost) {
+        try {
+            URI uri = URI.create(url);
+            return new URI(uri.getScheme(), newHost, uri.getRawPath(), uri.getRawQuery(), null).toString();
+        } catch (URISyntaxException e) {
+            return url;
         }
     }
 
@@ -195,16 +240,23 @@ public final class ModelAssetManager {
             InputStream responseStream,
             OutputStream fileOutputStream,
             String fileName,
-            long expectedSizeBytes
+            long expectedSizeBytes,
+            double minSpeedKbps
     ) throws IOException {
         boolean shouldLogProgress = expectedSizeBytes >= PROGRESS_LOG_THRESHOLD_BYTES;
         byte[] copyBuffer = new byte[256 * 1024];
         long downloadedBytes = 0L;
         int nextProgressPercent = 10;
         int readCount;
+
+        long windowStart = System.currentTimeMillis();
+        long windowBytes = 0L;
+        long slowSince = -1L;
+
         while ((readCount = responseStream.read(copyBuffer)) != -1) {
             fileOutputStream.write(copyBuffer, 0, readCount);
             downloadedBytes += readCount;
+            windowBytes += readCount;
             if (shouldLogProgress && expectedSizeBytes > 0) {
                 int completedPercent = (int) ((downloadedBytes * 100L) / expectedSizeBytes);
                 while (completedPercent >= nextProgressPercent && nextProgressPercent <= 100) {
@@ -215,6 +267,27 @@ public final class ModelAssetManager {
                             humanReadableBytes(expectedSizeBytes));
                     nextProgressPercent += 10;
                 }
+            }
+
+            // Speed monitoring: abort and let the caller switch sources when the
+            // download stays below the minimum speed for too long.
+            long now = System.currentTimeMillis();
+            long windowElapsed = now - windowStart;
+            if (windowElapsed >= SPEED_CHECK_INTERVAL_MS) {
+                double windowKbps = (windowBytes * 8.0 / 1000.0) / (windowElapsed / 1000.0);
+                if (minSpeedKbps > 0 && windowKbps < minSpeedKbps) {
+                    if (slowSince < 0L) {
+                        slowSince = now;
+                    } else if (now - slowSince >= SLOW_DOWNLOAD_MAX_DURATION_MS) {
+                        throw new IOException(String.format(
+                                "Download of '%s' too slow (%.0f KB/s < %.0f KB/s for > %ds), switching mirror source",
+                                fileName, windowKbps, minSpeedKbps, SLOW_DOWNLOAD_MAX_DURATION_MS / 1000L));
+                    }
+                } else {
+                    slowSince = -1L;
+                }
+                windowStart = now;
+                windowBytes = 0L;
             }
         }
         if (expectedSizeBytes <= 0 || !shouldLogProgress) {

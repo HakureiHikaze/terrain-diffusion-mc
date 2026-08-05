@@ -8,7 +8,7 @@
 
 | 功能 | 说明 |
 |------|------|
-| **河流系统** | 移植上游 `postprocessing.py` 的 D8 水文算法（流向 + 汇流累积 + Priority-Flood 洼地填平）到 Java，从高程图计算河网，生成 `RIVER` 生物群系 |
+| **河流系统** | 移植上游 PR #207 的 `RiverCarver`：确定性噪声零等高线雕刻河道（挖至海平面以下真实蓄水，O(1) 随机访问、无 tile 边界断裂），5 项参数可配置 |
 | **海滩生物群系** | 海岸带检测（陆地像素邻接海洋且近海平面），映射 `BEACH` / `SNOWY_BEACH` / `STONY_SHORE` |
 | **含水层** | 重新启用 `aquifers_enabled`，恢复 barrier / fluid_level / lava 四条原版 noise_router 通道，洞穴内出现水体与熔岩层 |
 | **矿脉** | 重新启用 `ore_veins_enabled`，恢复 vein 三条通道，生成大型铁矿/铜矿脉 |
@@ -179,9 +179,9 @@ cd onnxruntime
 
 AI 地形的核心是三阶段扩散管线（coarse 20 步 DPM-Solver++ → latent 2 步 flow matching → decoder 1 步），模型输出高程 + 气候变量；与 Minecraft 的集成全靠手写规则。
 
-- [BiomeClassifier.java](https://github.com/f1owkang/terrain-diffusion-mc/blob/mc26/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/BiomeClassifier.java)（约 290 行）——高程 + 4 气候变量 → 生物群系规则，含海岸带检测（海滩）
-- [RiverDetector.java](https://github.com/f1owkang/terrain-diffusion-mc/blob/mc26/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/RiverDetector.java)（新文件）——D8 流向 / 汇流累积 / Priority-Flood 洼地填平的 Java 移植，河流生成逻辑所在
-- 河流汇流阈值目前在 `LocalTerrainProvider` 中硬编码为 `50f`（原生像素单位），调小出更多小河，调大只保留大河
+- [BiomeClassifier.java](https://github.com/f1owkang/terrain-diffusion-mc/blob/mc26/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/BiomeClassifier.java)（约 290 行）——高程 + 4 气候变量 → 生物群系规则，含海岸带检测（海滩）与河道覆盖（河流/冻结河流）
+- [RiverCarver.java](https://github.com/f1owkang/terrain-diffusion-mc/blob/mc26/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/RiverCarver.java)（移植自上游 PR #207）——确定性河道雕刻：以噪声零等高线为中心线，把陆地挖到海平面以下形成蓄水河道，蜿蜒且 O(1) 随机访问，跨 tile 无缝
+- 河流参数全部在 `config/terrain-diffusion-mc.properties` 的 `rivers.*` 配置（频率/宽度/深度/海拔上限），无需改代码
 
 地形多样性远超生物群系多样性，弥合这一差距是实打实的机会。希望有人能把它做到极致。
 

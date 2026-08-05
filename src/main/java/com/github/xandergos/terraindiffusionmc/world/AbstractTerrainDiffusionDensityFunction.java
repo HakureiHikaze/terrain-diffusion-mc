@@ -16,9 +16,9 @@ import net.minecraft.world.level.levelgen.DensityFunction;
  */
 public abstract class AbstractTerrainDiffusionDensityFunction implements DensityFunction {
     /** Lowest density this function can report (blocks below the target height). */
-    public static final double MIN_DENSITY = -64;
+    public static final double MIN_DENSITY = -1;
     /** Highest density this function can report (blocks above the target height). */
-    public static final double MAX_DENSITY = 1024;
+    public static final double MAX_DENSITY = 1;
 
     @Override
     public double compute(DensityFunction.FunctionContext context) {
@@ -39,14 +39,14 @@ public abstract class AbstractTerrainDiffusionDensityFunction implements Density
 
         HeightmapData data = LocalTerrainProvider.getInstance().fetchHeightmap(blockStartZ, blockStartX, blockEndZ, blockEndX);
         if (data == null || data.heightmap == null) {
-            return -y;
+            return 1.0;
         }
 
         int localX = Math.max(0, Math.min(data.width  - 1, x - blockStartX));
         int localZ = Math.max(0, Math.min(data.height - 1, z - blockStartZ));
 
         int targetHeight = HeightConverter.convertToMinecraftHeight(data.heightmap[localZ][localX]);
-        return targetHeight - y;
+        return y < targetHeight ? 1.0 : -1.0;
     }
 
     private static final class FillContext {
@@ -95,7 +95,7 @@ public abstract class AbstractTerrainDiffusionDensityFunction implements Density
 
             HeightmapData data = ctx.data;
             if (data == null || data.heightmap == null) {
-                densities[i] = -y;
+                densities[i] = 1.0;
                 continue;
             }
 
@@ -104,7 +104,7 @@ public abstract class AbstractTerrainDiffusionDensityFunction implements Density
 
             int targetHeight = HeightConverter
                 .convertToMinecraftHeight(data.heightmap[localZ][localX]);
-            densities[i] = targetHeight - y;
+            densities[i] = y < targetHeight ? 1.0 : -1.0;
         }
     }
 

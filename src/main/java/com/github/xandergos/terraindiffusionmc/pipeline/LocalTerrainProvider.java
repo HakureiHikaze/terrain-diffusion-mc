@@ -1,5 +1,6 @@
 package com.github.xandergos.terraindiffusionmc.pipeline;
 
+import com.github.xandergos.terraindiffusionmc.config.TerrainDiffusionConfig;
 import com.github.xandergos.terraindiffusionmc.infinitetensor.FloatTensor;
 import com.github.xandergos.terraindiffusionmc.world.WorldScaleManager;
 import org.slf4j.Logger;
@@ -135,7 +136,29 @@ public final class LocalTerrainProvider {
      * @return float[2]: [0] = elev (H*W), [1] = climate (5*H*W, or null)
      */
     public static float[][] getPipelineData(int i1, int j1, int i2, int j2, boolean withClimate) throws Exception {
-        return submitToInferenceThread(() -> getInstance().pipeline.get(i1, j1, i2, j2, withClimate));
+        return submitToInferenceThread(() -> {
+            float[][] data = getInstance().pipeline.get(i1, j1, i2, j2, withClimate);
+            // Carve rivers into the elevation the explorer renders so the map matches the world.
+            if (data != null && data.length > 0 && data[0] != null) {
+                carveRivers(data[0], i1, j1, i2 - i1, j2 - j1, NATIVE_RESOLUTION);
+            }
+            return data;
+        });
+    }
+
+    /**
+     * Applies the configured river overlay to an elevation field in place, returning the carved
+     * river mask (or {@code null} when rivers are disabled). See {@link RiverCarver}.
+     */
+    static boolean[] carveRivers(float[] elev, int i0, int j0, int H, int W, float pixelSizeM) {
+        if (!TerrainDiffusionConfig.riversEnabled()) {
+            return null;
+        }
+        return RiverCarver.carve(elev, i0, j0, H, W, pixelSizeM, getSeed(),
+                TerrainDiffusionConfig.riverFrequency(),
+                TerrainDiffusionConfig.riverWidth(),
+                TerrainDiffusionConfig.riverDepth(),
+                TerrainDiffusionConfig.riverMaxAltitude());
     }
 
     /**
@@ -252,14 +275,8 @@ public final class LocalTerrainProvider {
         float[] elevFlat = out[0];
         float[] climate  = out[1];
 
-        short[] biomeFlat = BiomeClassifier.classify(elevFlat, climate, i1, j1, elevPadded, H, W, NATIVE_RESOLUTION);
-
-        // Detect rivers from native elevation and overlay on biome map
-        boolean[] rivers = RiverDetector.detectRivers(elevFlat, H, W, 50f, false);
-        for (int i = 0; i < rivers.length; i++) {
-            if (rivers[i]) biomeFlat[i] = BiomeClassifier.RIVER;
-        }
-
+        boolean[] riverMask = carveRivers(elevFlat, i1, j1, H, W, NATIVE_RESOLUTION);
+        short[] biomeFlat = BiomeClassifier.classify(elevFlat, climate, i1, j1, elevPadded, H, W, NATIVE_RESOLUTION, riverMask);
         return buildHeightmapData(elevFlat, biomeFlat, H, W);
     }
 
@@ -305,15 +322,8 @@ public final class LocalTerrainProvider {
 
         float[] elevOut = addElevationNoise(elevSmooth, elevPadded, i1, j1, H, W, pixelSizeM);
 
-        short[] biomeFlat = BiomeClassifier.classify(elevSmooth, climate, i1, j1, elevPadded, H, W, pixelSizeM);
-
-        // Detect rivers at native resolution, upsample to output resolution
-        boolean[] riversNative = RiverDetector.detectRivers(elevNativeFlat, nH, nW, 50f, false);
-        boolean[] riversUp    = RiverDetector.upsampleRiverMask(riversNative, nW, nH, W, H, scale);
-        for (int i = 0; i < riversUp.length; i++) {
-            if (riversUp[i]) biomeFlat[i] = BiomeClassifier.RIVER;
-        }
-
+        boolean[] riverMask = carveRivers(elevOut, i1, j1, H, W, pixelSizeM);
+        short[] biomeFlat = BiomeClassifier.classify(elevSmooth, climate, i1, j1, elevPadded, H, W, pixelSizeM, riverMask);
         return buildHeightmapData(elevOut, biomeFlat, H, W);
     }
 
