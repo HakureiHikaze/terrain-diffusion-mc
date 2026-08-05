@@ -158,6 +158,71 @@ public final class TerrainDiffusionConfig {
         return Math.max(0.0, speed);
     }
 
+    // =========================================================================
+    // Terrain shaping
+    // =========================================================================
+
+    /** Whether to apply folded-ridge noise (abs(noise)) for mountain skeleton. */
+    public static boolean ridgesEnabled() {
+        return readBoolean("terrain.ridges.enabled", true);
+    }
+
+    /** Ridge noise amplitude in metres at native resolution. */
+    public static float ridgeAmplitude() {
+        return readFloat("terrain.ridges.amplitude", 80f);
+    }
+
+    /** Whether to apply plateau-step mapping for vertical drama. */
+    public static boolean plateausEnabled() {
+        return readBoolean("terrain.plateau.enabled", true);
+    }
+
+    /** Lower bound of the plateau band (metres). */
+    public static float plateauMin() {
+        return readFloat("terrain.plateau.min", 600f);
+    }
+
+    /** Upper bound of the plateau band (metres). */
+    public static float plateauMax() {
+        return readFloat("terrain.plateau.max", 1800f);
+    }
+
+    /** Vertical compression ratio inside the plateau band (0 = full flat, 1 = no change). */
+    public static float plateauCompression() {
+        return readFloat("terrain.plateau.compression", 0.3f);
+    }
+
+    /** Steepness multiplier above the plateau band (>1 = cliff). */
+    public static float plateauCliffSteepness() {
+        return readFloat("terrain.plateau.cliff_steepness", 2.5f);
+    }
+
+    /**
+     * Low-frequency noise amplitude (metres) that shifts the plateau band up/down
+     * so plateaus only appear on fraction of the terrain.
+     */
+    public static float plateauVariability() {
+        return readFloat("terrain.plateau.variability", 400f);
+    }
+
+    // =========================================================================
+    // Wonders
+    // =========================================================================
+
+    /** Master switch for all wonder generation. */
+    public static boolean wondersEnabled() {
+        return readBoolean("wonders.enabled", true);
+    }
+
+    // =========================================================================
+    // Biome tweaks
+    // =========================================================================
+
+    /** Multiplier for fine climate noise amplitude in BiomeClassifier (0 = off, 1 = default). */
+    public static float biomeNoiseStrength() {
+        return readFloat("biome.noise_strength", 1f);
+    }
+
     private static void loadDefaults() {
         boolean loadedFromResource = false;
         try (InputStream in = TerrainDiffusionConfig.class.getResourceAsStream(RESOURCE_PATH)) {

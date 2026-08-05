@@ -1,5 +1,7 @@
 package com.github.xandergos.terraindiffusionmc.pipeline;
 
+import com.github.xandergos.terraindiffusionmc.config.TerrainDiffusionConfig;
+
 /**
  * Rule-based biome classifier port of _classify_biome in minecraft_api.py.
  *
@@ -80,20 +82,22 @@ public final class BiomeClassifier {
         float[] precipNoiseFact = new float[H * W];
         float[] snowNoise = new float[H * W];
 
+        float ns = TerrainDiffusionConfig.biomeNoiseStrength();
+
         for (int r = 0; r < H; r++) {
             for (int c = 0; c < W; c++) {
                 int idx = r * W + c;
                 float nx = j0 + c, ny = i0 + r;
                 float tnc = TEMP_NOISE.GetNoise(nx, ny);
                 float tnf = TEMP_NOISE_FINE.GetNoise(nx, ny);
-                tempNoise[idx] = 0.4f * tnc + 0.2f * tnf;
+                tempNoise[idx] = ns * (0.4f * tnc + 0.2f * tnf);
 
                 float pn = PRECIP_NOISE.GetNoise(nx, ny);
-                precipNoiseFact[idx] = 1.0f + 0.2f * pn;
+                precipNoiseFact[idx] = 1.0f + ns * 0.2f * pn;
 
                 float snc = SNOW_NOISE.GetNoise(nx, ny);
                 float snf = SNOW_NOISE_FINE.GetNoise(nx, ny);
-                snowNoise[idx] = 3.0f * snc + 2.0f * snf;
+                snowNoise[idx] = ns * (3.0f * snc + 2.0f * snf);
             }
         }
 

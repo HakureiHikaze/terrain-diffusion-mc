@@ -140,9 +140,19 @@ public final class LocalTerrainProvider {
     public static float[][] getPipelineData(int i1, int j1, int i2, int j2, boolean withClimate) throws Exception {
         return submitToInferenceThread(() -> {
             float[][] data = getInstance().pipeline.get(i1, j1, i2, j2, withClimate);
-            // Carve rivers into the elevation the explorer renders so the map matches the world.
             if (data != null && data.length > 0 && data[0] != null) {
-                carveRivers(data[0], i1, j1, i2 - i1, j2 - j1, NATIVE_RESOLUTION);
+                int H = i2 - i1, W = j2 - j1;
+                float[] elev = data[0];
+                float[] climate = (withClimate && data.length > 1) ? data[1] : null;
+
+                TerrainShaping.apply(elev, i1, j1, H, W, NATIVE_RESOLUTION);
+
+                if (climate != null) {
+                    short[] gating = BiomeClassifier.classify(elev, climate, i1, j1, elev, H, W, NATIVE_RESOLUTION);
+                    WonderGenerator.apply(elev, gating, i1, j1, H, W, NATIVE_RESOLUTION, getSeed());
+                }
+
+                carveRivers(elev, i1, j1, H, W, NATIVE_RESOLUTION);
             }
             return data;
         });
@@ -322,6 +332,12 @@ public final class LocalTerrainProvider {
         float[] elevFlat = out[0];
         float[] climate  = out[1];
 
+        TerrainShaping.apply(elevFlat, i1, j1, H, W, NATIVE_RESOLUTION);
+        TerrainShaping.apply(elevPadded, i1 - 1, j1 - 1, H + 2, W + 2, NATIVE_RESOLUTION);
+
+        short[] biomeGating = BiomeClassifier.classify(elevFlat, climate, i1, j1, elevPadded, H, W, NATIVE_RESOLUTION);
+        WonderGenerator.apply(elevFlat, biomeGating, i1, j1, H, W, NATIVE_RESOLUTION, getSeed());
+
         boolean[] riverMask = carveRivers(elevFlat, i1, j1, H, W, NATIVE_RESOLUTION);
         short[] biomeFlat = BiomeClassifier.classify(elevFlat, climate, i1, j1, elevPadded, H, W, NATIVE_RESOLUTION, riverMask);
         return buildHeightmapData(elevFlat, biomeFlat, H, W);
@@ -367,7 +383,13 @@ public final class LocalTerrainProvider {
         // Upsample climate (4, nH, nW) → (4, H, W)
         float[] climate = upsampleClimate(climateNativeFlat, nH, nW, cropI1, cropJ1, H, W, scale, nH * scale, nW * scale);
 
+        TerrainShaping.apply(elevSmooth, i1, j1, H, W, pixelSizeM);
+        TerrainShaping.apply(elevPadded, i1 - 1, j1 - 1, H + 2, W + 2, pixelSizeM);
+
         float[] elevOut = addElevationNoise(elevSmooth, elevPadded, i1, j1, H, W, pixelSizeM);
+
+        short[] biomeGating = BiomeClassifier.classify(elevSmooth, climate, i1, j1, elevPadded, H, W, pixelSizeM);
+        WonderGenerator.apply(elevOut, biomeGating, i1, j1, H, W, pixelSizeM, getSeed());
 
         boolean[] riverMask = null;
         if (TerrainDiffusionConfig.riversEnabled()) {
@@ -383,7 +405,7 @@ public final class LocalTerrainProvider {
                         TerrainDiffusionConfig.riverMaxAltitude());
             }
         }
-        short[] biomeFlat = BiomeClassifier.classify(elevSmooth, climate, i1, j1, elevPadded, H, W, pixelSizeM, riverMask);
+        short[] biomeFlat = BiomeClassifier.classify(elevOut, climate, i1, j1, elevPadded, H, W, pixelSizeM, riverMask);
         return buildHeightmapData(elevOut, biomeFlat, H, W);
     }
 
