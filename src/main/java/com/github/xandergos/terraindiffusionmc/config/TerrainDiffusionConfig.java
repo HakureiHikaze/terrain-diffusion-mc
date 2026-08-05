@@ -67,6 +67,31 @@ public final class TerrainDiffusionConfig {
         return readInt("spawn_search.max_size", 128);
     }
 
+    /**
+     * River generation mode: "hybrid" (default) routes D8 flow paths along the real terrain
+     * (with a halo window so paths are seamless across tiles) and carves them below sea level;
+     * "carver" uses the pure noise zero-contour carver instead.
+     */
+    public static String riverMode() {
+        String mode = readString("rivers.mode", "hybrid");
+        if (!"hybrid".equals(mode) && !"carver".equals(mode)) {
+            System.err.println("Invalid rivers.mode: " + mode + ", using default 'hybrid'");
+            return "hybrid";
+        }
+        return mode;
+    }
+
+    /** Minimum D8 contributing area (in native pixels) for a river path. Lower = more streams. */
+    public static float riverFlowThreshold() {
+        return readFloat("rivers.flow_threshold", 50f);
+    }
+
+    /** Dilation rings added to a carved path for tapered banks (0 = centre-line only). */
+    public static int riverCarveWidth() {
+        int width = (int) readFloat("rivers.carve_width", 1f);
+        return Math.max(0, width);
+    }
+
     /** Region side length in blocks. Must be a positive power of 2 (128, 256, 512, ...). */
     public static int tileSize() {
         int configuredTileSize = readInt("tile_size", DEFAULT_TILE_SIZE);

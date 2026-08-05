@@ -30,6 +30,8 @@ public final class LocalTerrainProvider {
     private static final Logger LOG = LoggerFactory.getLogger(LocalTerrainProvider.class);
 
     private static final float NATIVE_RESOLUTION = WorldPipelineModelConfig.nativeResolution();
+    /** Halo (native pixels) around a tile for D8 river routing so paths are seamless across tiles. */
+    private static final int HYBRID_HALO_PIXELS = 64;
 
     private static final FastNoiseLite ELEV_NOISE_COARSE = makeFnl(99999, 1f/24f, 3, 2f, 0.5f);
     private static final FastNoiseLite ELEV_NOISE_FINE   = makeFnl(88888, 1f/6f,  2, 2f, 0.6f);
@@ -148,17 +150,62 @@ public final class LocalTerrainProvider {
 
     /**
      * Applies the configured river overlay to an elevation field in place, returning the carved
-     * river mask (or {@code null} when rivers are disabled). See {@link RiverCarver}.
+     * river mask (or {@code null} when rivers are disabled). See {@link RiverCarver} and
+     * {@link RiverDetector}.
+     *
+     * <p>In "hybrid" mode (default) river paths come from D8 flow accumulation on the real
+     * elevation, computed on a halo-extended window so paths stay seamless across tile
+     * boundaries, then carved below sea level so channels hold water.
      */
     static boolean[] carveRivers(float[] elev, int i0, int j0, int H, int W, float pixelSizeM) {
         if (!TerrainDiffusionConfig.riversEnabled()) {
             return null;
         }
-        return RiverCarver.carve(elev, i0, j0, H, W, pixelSizeM, getSeed(),
-                TerrainDiffusionConfig.riverFrequency(),
-                TerrainDiffusionConfig.riverWidth(),
+        String mode = TerrainDiffusionConfig.riverMode();
+        if ("carver".equals(mode)) {
+            return RiverCarver.carve(elev, i0, j0, H, W, pixelSizeM, getSeed(),
+                    TerrainDiffusionConfig.riverFrequency(),
+                    TerrainDiffusionConfig.riverWidth(),
+                    TerrainDiffusionConfig.riverDepth(),
+                    TerrainDiffusionConfig.riverMaxAltitude());
+        }
+        int halo = HYBRID_HALO_PIXELS;
+        float[] elevExt = getInstance().pipeline.get(i0 - halo, j0 - halo, i0 + H + halo, j0 + W + halo, false)[0];
+        return carveRiversHybrid(elev, elevExt, halo, H, W, H, W, 1);
+    }
+
+    /**
+     * Hybrid river carving: D8 paths on a halo-extended native elevation window, cropped to the
+     * centre, upsampled to the output resolution and carved into {@code elevOut} in place.
+     *
+     * @param elevOut output-resolution elevation (H*W), mutated in place
+     * @param elevExt halo-extended native elevation, (nH+2*halo) x (nW+2*halo)
+     */
+    static boolean[] carveRiversHybrid(float[] elevOut, float[] elevExt, int halo,
+                                       int nH, int nW, int outH, int outW, int scale) {
+        int extH = nH + 2 * halo;
+        int extW = nW + 2 * halo;
+        boolean[] paths = RiverDetector.detectRivers(elevExt, extH, extW,
+                TerrainDiffusionConfig.riverFlowThreshold());
+
+        boolean[] centerNative = new boolean[nH * nW];
+        for (int r = 0; r < nH; r++) {
+            for (int c = 0; c < nW; c++) {
+                centerNative[r * nW + c] = paths[(r + halo) * extW + (c + halo)];
+            }
+        }
+
+        boolean[] pathsOut;
+        if (scale <= 1) {
+            pathsOut = centerNative;
+        } else {
+            pathsOut = RiverDetector.upsampleRiverMask(centerNative, nW, nH, outW, outH, scale);
+        }
+
+        return RiverCarver.carveAlongMask(elevOut, pathsOut, outH, outW,
                 TerrainDiffusionConfig.riverDepth(),
-                TerrainDiffusionConfig.riverMaxAltitude());
+                TerrainDiffusionConfig.riverMaxAltitude(),
+                TerrainDiffusionConfig.riverCarveWidth());
     }
 
     /**
@@ -322,7 +369,20 @@ public final class LocalTerrainProvider {
 
         float[] elevOut = addElevationNoise(elevSmooth, elevPadded, i1, j1, H, W, pixelSizeM);
 
-        boolean[] riverMask = carveRivers(elevOut, i1, j1, H, W, pixelSizeM);
+        boolean[] riverMask = null;
+        if (TerrainDiffusionConfig.riversEnabled()) {
+            if ("hybrid".equals(TerrainDiffusionConfig.riverMode())) {
+                int halo = HYBRID_HALO_PIXELS;
+                float[] elevExt = pipeline.get(i1n - halo, j1n - halo, i2n + halo, j2n + halo, false)[0];
+                riverMask = carveRiversHybrid(elevOut, elevExt, halo, nH, nW, H, W, scale);
+            } else {
+                riverMask = RiverCarver.carve(elevOut, i1, j1, H, W, pixelSizeM, getSeed(),
+                        TerrainDiffusionConfig.riverFrequency(),
+                        TerrainDiffusionConfig.riverWidth(),
+                        TerrainDiffusionConfig.riverDepth(),
+                        TerrainDiffusionConfig.riverMaxAltitude());
+            }
+        }
         short[] biomeFlat = BiomeClassifier.classify(elevSmooth, climate, i1, j1, elevPadded, H, W, pixelSizeM, riverMask);
         return buildHeightmapData(elevOut, biomeFlat, H, W);
     }

@@ -13,7 +13,7 @@
 
 | 功能 | 说明 |
 |------|------|
-| **河流系统** | 移植上游 PR #207 的 `RiverCarver`：确定性噪声零等高线雕刻河道（挖至海平面以下真实蓄水，O(1) 随机访问、无 tile 边界断裂），5 项参数可配置 |
+| **河流系统** | hybrid 模式（默认）：D8 汇流路径沿真实地形走向（带 halo 窗口跨 tile 无缝），雕刻至海平面下真实蓄水；可切换纯噪声雕刻（`rivers.mode=carver`），5+ 项参数可配置 |
 | **海滩生物群系** | 海岸带检测（陆地像素邻接海洋且近海平面），映射 `BEACH` / `SNOWY_BEACH` / `STONY_SHORE` |
 | **含水层** | 重新启用 `aquifers_enabled`，恢复 barrier / fluid_level / lava 四条原版 noise_router 通道，洞穴内出现水体与熔岩层 |
 | **矿脉** | 重新启用 `ore_veins_enabled`，恢复 vein 三条通道，生成大型铁矿/铜矿脉 |
@@ -185,8 +185,8 @@ cd onnxruntime
 AI 地形的核心是三阶段扩散管线（coarse 20 步 DPM-Solver++ → latent 2 步 flow matching → decoder 1 步），模型输出高程 + 气候变量；与 Minecraft 的集成全靠手写规则。
 
 - [BiomeClassifier.java](https://github.com/f1owkang/terrain-diffusion-mc/blob/mc26/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/BiomeClassifier.java)（约 290 行）——高程 + 4 气候变量 → 生物群系规则，含海岸带检测（海滩）与河道覆盖（河流/冻结河流）
-- [RiverCarver.java](https://github.com/f1owkang/terrain-diffusion-mc/blob/mc26/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/RiverCarver.java)（移植自上游 PR #207）——确定性河道雕刻：以噪声零等高线为中心线，把陆地挖到海平面以下形成蓄水河道，蜿蜒且 O(1) 随机访问，跨 tile 无缝
-- 河流参数全部在 `config/terrain-diffusion-mc.properties` 的 `rivers.*` 配置（频率/宽度/深度/海拔上限），无需改代码
+- [RiverDetector.java](https://github.com/f1owkang/terrain-diffusion-mc/blob/mc26/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/RiverDetector.java)（D8 流向 + 汇流累积）与 [RiverCarver.java](https://github.com/f1owkang/terrain-diffusion-mc/blob/mc26/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/RiverCarver.java)（路径雕刻，移植自上游 PR #207）：hybrid 模式用 D8 在 halo 扩展窗口（64 原生像素）上算河网保证跨 tile 无缝，再沿路径雕刻出蓄水河道；`rivers.mode=carver` 可切回纯噪声雕刻
+- 河流参数全部在 `config/terrain-diffusion-mc.properties` 的 `rivers.*` 配置（模式/汇流阈值/河岸宽度/深度/海拔上限），无需改代码
 
 地形多样性远超生物群系多样性，弥合这一差距是实打实的机会。希望有人能把它做到极致。
 

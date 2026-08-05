@@ -13,7 +13,7 @@
 
 | Feature | Description |
 |---------|-------------|
-| **River system** | Port of `RiverCarver` from upstream PR #207: deterministic noise-zero-contour channel carving (cut below sea level so channels actually hold water; O(1) random access, no tile-boundary breaks), 5 configurable parameters |
+| **River system** | Hybrid mode (default): D8 flow-accumulation paths follow the real terrain (computed on a halo-extended window so they stay seamless across tiles) and are carved below sea level so channels actually hold water; switchable back to pure noise carving (`rivers.mode=carver`), 5+ configurable parameters |
 | **Beach biomes** | Coastline detection (land pixels adjacent to ocean near sea level), mapped to `BEACH` / `SNOWY_BEACH` / `STONY_SHORE` |
 | **Aquifers** | Re-enabled `aquifers_enabled` and restored the four vanilla noise-router channels (barrier / fluid level / lava) — cave water bodies and lava layers are back |
 | **Ore veins** | Re-enabled `ore_veins_enabled` and restored the three vein channels — large iron/copper vein deposits generate |
@@ -188,8 +188,8 @@ The built jar appears in `java/build/`. Rename it to `onnxruntime-dml.jar` and p
 The core of the AI terrain is a three-stage diffusion pipeline (coarse 20-step DPM-Solver++ → latent 2-step flow matching → decoder 1-step). The models output elevation + climate variables; the Minecraft integration is all hand-written rules.
 
 - [BiomeClassifier.java](https://github.com/f1owkang/terrain-diffusion-mc/blob/mc26/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/BiomeClassifier.java) (~290 lines) — elevation + 4 climate variables → biome rules, including coastline detection (beaches) and carved-channel overrides (river/frozen river)
-- [RiverCarver.java](https://github.com/f1owkang/terrain-diffusion-mc/blob/mc26/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/RiverCarver.java) (ported from upstream PR #207) — deterministic channel carving: noise zero-contours form centre-lines, land is cut below sea level so channels hold water; winding and O(1) random-access, seamless across tiles
-- All river parameters live in the `rivers.*` config keys in `config/terrain-diffusion-mc.properties` (frequency / width / depth / max altitude) — no code changes needed
+- [RiverDetector.java](https://github.com/f1owkang/terrain-diffusion-mc/blob/mc26/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/RiverDetector.java) (D8 flow direction + flow accumulation) and [RiverCarver.java](https://github.com/f1owkang/terrain-diffusion-mc/blob/mc26/src/main/java/com/github/xandergos/terraindiffusionmc/pipeline/RiverCarver.java) (path carving, ported from upstream PR #207): hybrid mode routes D8 paths on a halo-extended window (64 native pixels) so they are seamless across tiles, then carves water-holding channels along the paths; `rivers.mode=carver` switches back to pure noise carving
+- All river parameters live in the `rivers.*` config keys in `config/terrain-diffusion-mc.properties` (mode / flow threshold / bank width / depth / max altitude) — no code changes needed
 
 The terrain diversity far outpaces the biome diversity and there's a real opportunity to close that gap. I'm hoping someone goes crazy with it.
 

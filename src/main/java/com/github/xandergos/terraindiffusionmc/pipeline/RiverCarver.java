@@ -92,6 +92,72 @@ public final class RiverCarver {
     }
 
     /**
+     * Carves river channels along a precomputed path mask (e.g. D8 flow-accumulation
+     * paths from {@link RiverDetector}). The mask centre-line is cut down to the
+     * channel floor (below sea level so the world's sea fluid fills it); each
+     * additional {@code bankSmoothingRounds} dilates the channel by one ring with a
+     * progressively shallower cut for smooth tapered banks. Channels are only cut
+     * into land above sea level and below {@code maxAltitudeMeters}.
+     *
+     * @param elev                elevation in metres, row-major {@code (H, W)}; mutated in place
+     * @param riverMask           per-pixel river path mask, length H*W
+     * @param H                   height (rows)
+     * @param W                   width (columns)
+     * @param depthMeters         how far below sea level a channel centre is cut
+     * @param maxAltitudeMeters   channels are not cut into terrain above this elevation
+     * @param bankSmoothingRounds how many dilation rings to add for tapered banks (0 = centre-line only)
+     * @return wet mask, {@code true} where a block was carved to below sea level
+     */
+    public static boolean[] carveAlongMask(float[] elev, boolean[] riverMask, int H, int W,
+                                           float depthMeters, float maxAltitudeMeters, int bankSmoothingRounds) {
+        boolean[] wet = new boolean[H * W];
+        if (elev == null || riverMask == null || depthMeters <= 0f) {
+            return wet;
+        }
+        int N = H * W;
+        boolean[] processed = new boolean[N];
+        boolean[] current = riverMask;
+        for (int ring = 0; ring <= bankSmoothingRounds; ring++) {
+            float weight = (float) (bankSmoothingRounds - ring + 1) / (float) (bankSmoothingRounds + 1);
+            for (int i = 0; i < N; i++) {
+                if (!current[i] || processed[i]) continue;
+                processed[i] = true;
+                float e = elev[i];
+                if (e <= 0f || e > maxAltitudeMeters) continue;
+                float carved = e - weight * (e + depthMeters);
+                if (carved < e) {
+                    elev[i] = carved;
+                }
+                if (carved < 0f) {
+                    wet[i] = true;
+                }
+            }
+            if (ring < bankSmoothingRounds) {
+                current = dilate(current, H, W);
+            }
+        }
+        return wet;
+    }
+
+    /** 8-neighbour dilation of a boolean 2D mask. */
+    private static boolean[] dilate(boolean[] mask, int H, int W) {
+        boolean[] out = new boolean[H * W];
+        for (int r = 0; r < H; r++) {
+            for (int c = 0; c < W; c++) {
+                if (!mask[r * W + c]) continue;
+                int r0 = Math.max(0, r - 1), r1 = Math.min(H - 1, r + 1);
+                int c0 = Math.max(0, c - 1), c1 = Math.min(W - 1, c + 1);
+                for (int nr = r0; nr <= r1; nr++) {
+                    for (int nc = c0; nc <= c1; nc++) {
+                        out[nr * W + nc] = true;
+                    }
+                }
+            }
+        }
+        return out;
+    }
+
+    /**
      * Derives a stable, well-mixed int noise seed from the 64-bit world seed, offset so the river
      * network is decorrelated from the climate/elevation noises used elsewhere.
      */
