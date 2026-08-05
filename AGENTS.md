@@ -22,6 +22,10 @@ Two orthogonal selectors: inference variant (`useDml`/`useCuda`/`useCpu`, mutual
 - `./gradlew pipelineTest` runs `PipelineTest.main` (JavaExec, `-Xmx8g`): downloads real models, generates one 256-block tile, fails if VRAM delta exceeds 2500 MB (measured via `nvidia-smi`). Not a JUnit test — there is no test framework in this repo.
 - `./gradlew runClient` for the dev client; sources jar via `-PwithSourcesJar=true`. All JavaExec tasks force `log4j2-dev.xml` from the repo root.
 
+## CI / Release
+
+- `.github/workflows/release.yml` — pushing a `v*` tag builds all three inference variants (DML/CUDA/CPU) × all three MC targets (261/262/263, 9 jars) in a matrix on ubuntu-latest and publishes a GitHub Release with the jars (auto-generated release notes). Tag must be `v{mod_version}` matching `gradle.properties`, or the build fails. DML variant works on Linux runners because `libs/onnxruntime-dml.jar` ships in the repo.
+
 ## Network (dev machine)
 
 - Outbound traffic goes through a local proxy `http://127.0.0.1:7897`. The Gradle **wrapper** downloader reads JVM proxy system properties, not env vars, so use:
