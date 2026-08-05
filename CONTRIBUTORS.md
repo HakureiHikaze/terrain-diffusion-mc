@@ -10,4 +10,5 @@
 - [tlhr](https://github.com/tlhr)
 - [deforcy](https://github.com/deforcy)
 - [f1owkang](https://github.com/f1owkang)
+- [DeepSeek](https://github.com/deepseek-ai)（AI 开发助手）
 - [batata1-jg](https://github.com/batata1-jg)
