@@ -1,6 +1,8 @@
 package com.github.xandergos.terraindiffusionmc.world;
 
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.KeyDispatchDataCodec;
 import net.minecraft.world.level.levelgen.DensityFunction;
 
@@ -14,9 +16,15 @@ import net.minecraft.world.level.levelgen.DensityFunction;
  */
 public class TerrainDiffusionDensityFunction extends AbstractTerrainDiffusionDensityFunction {
     public static final MapCodec<TerrainDiffusionDensityFunction> CODEC =
-            MapCodec.unit(TerrainDiffusionDensityFunction::new);
+            RecordCodecBuilder.mapCodec(instance -> instance.group(
+                    Codec.BOOL.optionalFieldOf("caves", false).forGetter(f -> f.caves)
+            ).apply(instance, TerrainDiffusionDensityFunction::new));
 
     public static final KeyDispatchDataCodec<TerrainDiffusionDensityFunction> CODEC_HOLDER = KeyDispatchDataCodec.of(CODEC);
+
+    private TerrainDiffusionDensityFunction(boolean caves) {
+        super(caves);
+    }
 
     @Override
     public double minValue() {

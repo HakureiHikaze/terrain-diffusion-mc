@@ -34,34 +34,8 @@
       "type": "terrain-diffusion-mc:terrain_diffusion"
     },
     "final_density": {
-      "type": "minecraft:min",
-      "argument1": {
-        "type": "terrain-diffusion-mc:terrain_diffusion"
-      },
-      "argument2": {
-        "type": "minecraft:range_choice",
-        "input": "minecraft:y",
-        "max_exclusive": 72,
-        "min_inclusive": -64,
-        "when_in_range": {
-          "type": "minecraft:add",
-          "argument1": {
-            "type": "minecraft:mul",
-            "argument1": 4.0,
-            "argument2": {
-              "type": "minecraft:square",
-              "argument": {
-                "type": "minecraft:noise",
-                "noise": "minecraft:cave_layer",
-                "xz_scale": 1.0,
-                "y_scale": 8.0
-              }
-            }
-          },
-          "argument2": -1.5
-        },
-        "when_out_of_range": 100.0
-      }
+      "type": "terrain-diffusion-mc:terrain_diffusion",
+      "caves": true
     },
     "vein_toggle": {
       "type": "minecraft:interpolated",
