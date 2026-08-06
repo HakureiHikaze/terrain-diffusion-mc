@@ -1,129 +1,126 @@
 # Terrain Diffusion Next
 
 <p align="center">
-  <img src="site/assets/logo.svg" width="120" height="120" alt="Terrain Diffusion Next" title="Terrain Diffusion Next">
-</p>
-
-<p align="center">
-  <em>The icon is AI-generated — community design submissions are welcome via <a href="https://github.com/f1owkang/Terrain-Diffusion-Next/issues/new">Issues</a>.</em>
+  <img src="site/assets/logo.svg" width="120" height="120" alt="Terrain Diffusion Next">
 </p>
 
 <p align="center">
   <a href="https://github.com/f1owkang/Terrain-Diffusion-Next/releases"><img src="https://img.shields.io/badge/Minecraft-26.x-brightgreen?style=flat-square" alt="Minecraft 26.x"></a>
-  <a href=""><img src="https://img.shields.io/badge/Java-25-orange?style=flat-square" alt="Java 25"></a>
+  <a href="https://adoptium.net/"><img src="https://img.shields.io/badge/Java-25-orange?style=flat-square" alt="Java 25"></a>
   <a href="LICENSE.txt"><img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License: MIT"></a>
   <a href="https://github.com/f1owkang/Terrain-Diffusion-Next/graphs/contributors"><img src="https://img.shields.io/github/contributors/f1owkang/Terrain-Diffusion-Next?style=flat-square" alt="Contributors"></a>
 </p>
 
 <p align="center">
-  <b>Diffusion-model terrain generation for Minecraft — AI-crafted mountains, rivers, coastlines and ore veins. Every world is one of a kind.</b>
+  Diffusion-model terrain for Minecraft — AI-crafted mountains, rivers, coasts and ore veins. Every world is one of a kind.
 </p>
 
 <p align="center">
-  [Download](https://github.com/f1owkang/Terrain-Diffusion-Next/releases) · [Quick start](#quick-start) · [Features](#features) · [Configuration](#configuration) · [FAQ](#faq) · [中文版](README.md)
+  <a href="https://github.com/f1owkang/Terrain-Diffusion-Next/releases">Download</a> · <a href="#quick-start">Quick start</a> · <a href="#server-deployment">Server deployment</a> · <a href="#configuration">Configuration</a> · <a href="#faq">FAQ</a> · <a href="README.md">中文版</a>
 </p>
 
-**Terrain Diffusion Next** is an independent fork of [terrain-diffusion-mc](https://github.com/xandergos/terrain-diffusion-mc) (targeting Minecraft 26.x) that integrates the [Terrain Diffusion](https://github.com/xandergos/terrain-diffusion) (SIGGRAPH '26) diffusion-model terrain generator into Minecraft, and extends it with rivers, beaches, aquifers, ore veins and vanilla structure support.
-
-> ⚠️ **The current release is an early development release**: features are still under active iteration — bugs and rough edges are expected. For a stable experience, use the upstream 2.x builds (Minecraft 1.20.1 / 1.21.1 / 1.21.11).
+**Terrain Diffusion Next** is an independent fork of [terrain-diffusion-mc](https://github.com/xandergos/terrain-diffusion-mc) (Minecraft 26.x) integrating the [Terrain Diffusion](https://github.com/xandergos/terrain-diffusion) (SIGGRAPH '26) diffusion-model terrain generator, extended with rivers, beaches, aquifers, ore veins and vanilla structures. Works on clients and dedicated servers (26.x).
 
 ## Features
 
 | Feature | Description |
 |---------|-------------|
-| **AI terrain** | Three-stage diffusion models stream-generate tile by tile (coarse → latent → decoder), outputting elevation + climate variables. Determined by the world seed and reproducible |
-| **River system** | Hybrid mode (default): D8 flow-accumulation paths follow the real terrain (computed on a halo-extended window so they stay seamless across tiles) and are carved below sea level so channels actually hold water; switchable back to pure noise carving (`rivers.mode=carver`) |
-| **Beach biomes** | Coastline detection (land pixels adjacent to ocean near sea level), mapped to `BEACH` / `SNOWY_BEACH` / `STONY_SHORE` |
-| **Aquifers** | Re-enabled `aquifers_enabled` and restored the four vanilla noise-router channels (barrier / fluid level / lava) — cave water bodies and lava layers are back |
-| **Ore veins** | Re-enabled `ore_veins_enabled` and restored the three vein channels — large iron/copper vein deposits generate |
-| **Structure support** | Biome tags added for the 3 custom biomes (forest_sparse / taiga_sparse / snowy_taiga_sparse); villages, mineshafts, strongholds etc. now generate on their chunks |
-| **Localization** | Simplified Chinese language file; the "Terrain Diffusion Next" world type and settings screens display in Chinese |
-
-## Screenshots
-
-<!-- TODO: Add in-game screenshots. 2~3 suggested: terrain panorama, river system, caves/ore veins.
-
-     Put the images under docs/screenshots/ and reference them here, e.g.:
-
-     <img src="docs/screenshots/terrain.jpg" width="800" alt="Terrain panorama" />
-     <img src="docs/screenshots/rivers.jpg" width="800" alt="River system" />
-     <img src="docs/screenshots/caves.jpg" width="800" alt="Caves and ore veins" />
--->
+| **AI terrain** | Three-stage diffusion models (coarse → latent → decoder) output seeded, reproducible elevation + climate |
+| **River system** | Hybrid (default): D8 paths follow the terrain, carved below sea level; or pure noise (`rivers.mode=carver`) |
+| **Beach biomes** | Coastline detection maps to `BEACH` / `SNOWY_BEACH` / `STONY_SHORE` |
+| **Aquifers & veins** | Re-enabled aquifers and ore veins: cave water, lava layers, iron/copper veins |
+| **Structure support** | Biome tags for the 3 custom biomes: villages, mineshafts, strongholds generate there |
+| **Localization** | Simplified Chinese language file for the world type and settings screens |
 
 ## Quick start
 
-```bash
-# 1. Download the jar matching your Minecraft version from Releases and put it in your mods/ folder
-# 2. Launch the game (once online) — the AI models (~2.5GB) download automatically
-# 3. Create a world → select the "Terrain Diffusion Next" world type
-# 4. Optional: click Customize to set the World Scale (see below)
-```
+1. Grab the jar for your version from [Releases](https://github.com/f1owkang/Terrain-Diffusion-Next/releases) into `mods/`
+2. Launch the game (online once) — the AI models (~2.5 GB) auto-download and verify
+3. Create a world → pick the "Terrain Diffusion Next" world type
+4. Optional: Customize → World Scale (below)
 
-**Requires Fabric + Fabric API.** The CPU build is slow unless you are on macOS — the Windows or CUDA builds are recommended:
+**Requires Fabric + Fabric API.** The CPU build is slow unless you are on macOS:
 
-| Build                     | Supports                    | Setup required                          |
-|---------------------------| --------------------------- | --------------------------------------- |
-| **Windows** (recommended) | Windows with any modern GPU | None                                    |
-| **CUDA**                  | NVIDIA GPUs                 | [CUDA + cuDNN install](CUDA_INSTALL.md) |
-| **CPU**                   | Everything else             | None (CoreML acceleration on Apple Silicon) |
+| Build | Supports | Setup required |
+|-------|----------|----------------|
+| **Windows** (recommended) | Windows with any modern GPU | None |
+| **CUDA** | NVIDIA GPUs | None (runtime libs auto-download, see [CUDA_INSTALL.md](CUDA_INSTALL.md)) |
+| **CPU** | Everything else | None (CoreML on Apple Silicon) |
 
-**Requirements**: Java 25 · 1.5GB VRAM · 2.5GB RAM (may need to increase Minecraft's RAM allocation)
+**Requirements**: Java 25 · 1.5 GB VRAM · 2.5 GB RAM
 
 ## Supported Minecraft versions
 
-This mod targets Minecraft **26.x** (**26.1**, **26.2**, **26.3**). A single jar declares compatibility with the whole `>=26.1` range.
+Targets Minecraft **26.x** (26.1 / 26.2 / 26.3); one jar covers the whole `>=26.1` range.
 
-> For Minecraft 1.20.1 / 1.21.1 / 1.21.11 (the last obfuscated releases) use the upstream 2.x builds.
+> For 1.20.1 / 1.21.1 / 1.21.11 (the last obfuscated releases) use the upstream 2.x builds.
 
-## Tips
+## Server deployment
 
-**World Scale (per-world setting)**: click **Customize** in world creation and set `World Scale` (integer `1..6`). Saved with the world:
+Works on dedicated 26.x servers; the CUDA build auto-downloads the CUDA 12 runtime libraries (no manual install):
 
-- how many real-world meters each block represents (`scale=1` => `30m/block`, `scale=2` => `15m/block`)
-- 2 is recommended for a good balance of scale and playability; use 1 for smaller, more compressed worlds
-- Lower values stress the GPU more, higher values stress the CPU more (larger world height)
+- **Ready in ~15 s**: startup preloads skipped, terrain generates on demand
+- **Recommended**: `max-tick-time=-1` in `server.properties` (no watchdog kills)
+- **Scouting**: `/td-explore` starts the terrain browser (`http://127.0.0.1:19801`)
 
-**Exploring the world**: run `/td-explore` to open the built-in terrain explorer web UI (`http://localhost:19801`) and scout continents, mountains, rivers and islands before venturing out. A land spawn point near (0,0) is found automatically.
+## World scale & exploration
+
+**World Scale (per-world)**: click **Customize** when creating a world and set `World Scale` (integer `1..6`), saved with the save:
+
+- Real-world meters per block (`scale=1` => `30m/block`, `scale=2` => `15m/block`)
+- 2 is recommended; 1 is denser, 4-6 amplify the terrain
+- Lower scales stress the GPU more, higher scales the CPU more
+
+**Exploring**: run `/td-explore` for the terrain explorer web UI (`http://localhost:19801`) to scout continents, mountains, rivers and islands and mark coordinates. A land spawn near (0, 0) is found automatically.
+
+**Finding cool terrain**: browse the elevation map with `/td-explore`, note the coordinates of peaks, canyons and archipelagos, then teleport there — new regions generate on demand, ~5 s each.
 
 ## Configuration
 
-Edit `config/terrain-diffusion-next.properties` (created automatically on first launch, with bilingual Chinese/English comments on every option):
+Edit `config/terrain-diffusion-next.properties` (auto-created on first launch, bilingual comments on every option):
 
 ```
-inference.device=gpu           # Inference device: cpu / gpu / auto (try GPU first, fall back to CPU)
-inference.offload_models=true  # Offload inactive models from VRAM so only one model occupies the GPU at a time
-validate_model=true            # Validate SHA-256 of already-downloaded model files
-explorer.port=19801            # Port for the local terrain explorer web UI (started with /td-explore)
-tile_size=256                  # Terrain generation region side length in blocks. Must be a power of 2.
-spawn_search.initial_size=16   # Spawn search: coarse-pixel region sizes for land detection near (0,0)
+inference.device=gpu           # Inference device: cpu / gpu / auto (GPU first, CPU fallback)
+inference.offload_models=true  # Offload inactive models from VRAM
+validate_model=true            # SHA-256 validation of downloaded model files
+explorer.port=19801            # Port of the terrain explorer web UI (/td-explore)
+tile_size=256                  # Terrain region side length in blocks (power of 2)
+spawn_search.initial_size=16   # Spawn land-search region size near (0, 0)
 spawn_search.max_size=128
+rivers.enabled=true            # Enable the river system
+rivers.mode=hybrid             # hybrid (terrain-following) or carver (pure noise)
+worldgen.skip_initial_chunk_preload=true  # Skip startup preload, ready faster
+download.mirrors=huggingface.co,hf-mirror.com  # Model mirrors, tried in order
 ```
 
 ## FAQ
 
-- **A dynamic link library (DLL) initialization routine failed** — requires Java 25 or higher; the [latest Microsoft OpenJDK 25](https://learn.microsoft.com/en-us/java/openjdk/download) is known to work
-- **LoadLibrary failed with error 126** (CUDA build only) — improper CUDA/cuDNN installation; see [CUDA_INSTALL.md](CUDA_INSTALL.md)
-- **Failed to load terrain-diffusion models** — out of memory; the models take up about 2.5GB of RAM, increase Minecraft's RAM allocation
+- **DLL initialization routine failed** — needs Java 25+; the [latest Microsoft OpenJDK 25](https://learn.microsoft.com/en-us/java/openjdk/download) is known to work
+- **LoadLibrary failed with error 126** (CUDA build only) — bad CUDA/cuDNN install; see [CUDA_INSTALL.md](CUDA_INSTALL.md)
+- **Failed to load terrain-diffusion models** — out of memory; the models take ~2.5 GB, raise the allocation
+- **Server killed by the watchdog at startup** — set `max-tick-time=-1` in `server.properties`
+- **Tick lag after teleporting** — new terrain needs a few seconds of GPU inference; normal, recovers quickly
+- **Finding cool terrain** — `/td-explore` shows elevation/climate per coordinate; analyze coarse map data to auto-locate peaks and canyons
 
 **Issue still not resolved? [Raise it here](https://github.com/f1owkang/Terrain-Diffusion-Next/issues/new).**
 
-## Development
+## Building from source
 
-See [BUILDING.md](BUILDING.md) for build instructions, building onnxruntime with DirectML, and notes for mod developers.
+See [BUILDING.md](BUILDING.md) for builds, DirectML onnxruntime, and mod developer notes.
 
 ## Contributors
 
 This project is a fork of [terrain-diffusion-mc](https://github.com/xandergos/terrain-diffusion-mc). The Terrain Diffusion ecosystem is built by the following contributors (in no particular order):
 
-<a href="https://github.com/xandergos"><img src="https://github.com/xandergos.png" width="50" height="50" alt="xandergos" title="xandergos" /></a>
-<a href="https://github.com/AirRunner"><img src="https://github.com/AirRunner.png" width="50" height="50" alt="AirRunner" title="AirRunner" /></a>
-<a href="https://github.com/ThatDamnWittyWhizHard"><img src="https://github.com/ThatDamnWittyWhizHard.png" width="50" height="50" alt="ThatDamnWittyWhizHard" title="ThatDamnWittyWhizHard" /></a>
-<a href="https://github.com/ayushsucksaf"><img src="https://github.com/ayushsucksaf.png" width="50" height="50" alt="ayushsucksaf" title="ayushsucksaf" /></a>
-<a href="https://github.com/BillGoldenWater"><img src="https://github.com/BillGoldenWater.png" width="50" height="50" alt="BillGoldenWater" title="BillGoldenWater" /></a>
-<a href="https://github.com/tlhr"><img src="https://github.com/tlhr.png" width="50" height="50" alt="tlhr" title="tlhr" /></a>
-<a href="https://github.com/deforcy"><img src="https://github.com/deforcy.png" width="50" height="50" alt="deforcy" title="deforcy" /></a>
-<a href="https://github.com/f1owkang"><img src="https://github.com/f1owkang.png" width="50" height="50" alt="f1owkang" title="f1owkang" /></a>
-<a href="https://github.com/deepseek-ai" title="DeepSeek (AI development assistant)"><img src="https://github.com/deepseek-ai.png" width="50" height="50" alt="DeepSeek" /></a>
+<a href="https://github.com/xandergos"><img src="https://github.com/xandergos.png" width="50" height="50" alt="xandergos"></a>
+<a href="https://github.com/AirRunner"><img src="https://github.com/AirRunner.png" width="50" height="50" alt="AirRunner"></a>
+<a href="https://github.com/ThatDamnWittyWhizHard"><img src="https://github.com/ThatDamnWittyWhizHard.png" width="50" height="50" alt="ThatDamnWittyWhizHard"></a>
+<a href="https://github.com/ayushsucksaf"><img src="https://github.com/ayushsucksaf.png" width="50" height="50" alt="ayushsucksaf"></a>
+<a href="https://github.com/BillGoldenWater"><img src="https://github.com/BillGoldenWater.png" width="50" height="50" alt="BillGoldenWater"></a>
+<a href="https://github.com/tlhr"><img src="https://github.com/tlhr.png" width="50" height="50" alt="tlhr"></a>
+<a href="https://github.com/deforcy"><img src="https://github.com/deforcy.png" width="50" height="50" alt="deforcy"></a>
+<a href="https://github.com/f1owkang"><img src="https://github.com/f1owkang.png" width="50" height="50" alt="f1owkang"></a>
+<a href="https://github.com/deepseek-ai"><img src="https://github.com/deepseek-ai.png" width="50" height="50" alt="DeepSeek"></a>
 
 ### Upstream projects
 
