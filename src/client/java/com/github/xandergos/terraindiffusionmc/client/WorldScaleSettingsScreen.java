@@ -6,35 +6,23 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
-import net.minecraft.client.gui.screens.worldselection.WorldCreationUiState;
-import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
-import net.minecraft.core.RegistryAccess;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.level.dimension.DimensionType;
-import net.minecraft.world.level.dimension.LevelStem;
-import net.minecraft.world.level.levelgen.WorldDimensions;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * World creation settings screen for selecting the initial terrain scale of a world.
+ *
+ * <p>The scale only affects terrain resolution (meters per block). Dimension
+ * height limits are not managed by the mod; they are defined by datapacks.
  */
 public final class WorldScaleSettingsScreen extends Screen {
-    private static final String MOD_ID = "terrain-diffusion-mc";
     private static final int TEXT_FIELD_WIDTH = 80;
     private static final int TEXT_FIELD_HEIGHT = 20;
     private static final int BUTTON_WIDTH = 80;
     private static final int BUTTON_HEIGHT = 20;
 
     private static final Component LABEL_TEXT = Component.literal("World Scale");
-    private static final Component DESCRIPTION_TEXT = Component.literal("Enter an integer value (1-6)");
-    private static final Component ERROR_TEXT = Component.literal("Scale must be an integer between 1 and 6");
+    private static final Component DESCRIPTION_TEXT = Component.literal("Enter an integer value (1-" + WorldScaleManager.MAX_SCALE + ")");
+    private static final Component ERROR_TEXT = Component.literal("Scale must be an integer between 1 and " + WorldScaleManager.MAX_SCALE);
 
     private final Screen parentScreen;
     private EditBox scaleTextField;
@@ -107,52 +95,10 @@ public final class WorldScaleSettingsScreen extends Screen {
                 validationTextWidget.setMessage(ERROR_TEXT);
                 return;
             }
-            applyWorldHeightForScale(selectedScale);
             WorldScaleSelectionState.setPendingScale(selectedScale);
             onClose();
         } catch (NumberFormatException exception) {
             validationTextWidget.setMessage(ERROR_TEXT);
         }
-    }
-
-    /**
-     * Applies a pre-registered dimension type variant for the chosen scale.
-     */
-    private void applyWorldHeightForScale(int selectedScale) {
-        if (!(parentScreen instanceof CreateWorldScreen createWorldScreen)) {
-            return;
-        }
-
-        createWorldScreen.getUiState().updateDimensions((registryManager, selectedDimensions) ->
-                updateOverworldDimensionType(registryManager, selectedDimensions, selectedScale) == null
-                        ? selectedDimensions
-                        : updateOverworldDimensionType(registryManager, selectedDimensions, selectedScale));
-    }
-
-    /**
-     * Replaces only the overworld dimension type entry with the scale-specific pre-registered one.
-     */
-    private WorldDimensions updateOverworldDimensionType(
-            RegistryAccess.Frozen registryAccess,
-            WorldDimensions selectedDimensions,
-            int selectedScale
-    ) {
-        Registry<DimensionType> dimensionTypeRegistry = registryAccess.lookupOrThrow(Registries.DIMENSION_TYPE);
-        LevelStem overworldStem = selectedDimensions.get(LevelStem.OVERWORLD).orElse(null);
-        if (overworldStem == null) {
-            return null;
-        }
-
-        Identifier dimensionTypeId = Identifier.fromNamespaceAndPath(MOD_ID, "terrain_diffusion_scale_" + selectedScale);
-        Holder.Reference<DimensionType> selectedDimensionTypeEntry = dimensionTypeRegistry.get(dimensionTypeId).orElse(null);
-        if (selectedDimensionTypeEntry == null) {
-            return null;
-        }
-
-        LevelStem updatedOverworldStem = new LevelStem(selectedDimensionTypeEntry, overworldStem.generator());
-
-        Map<ResourceKey<LevelStem>, LevelStem> updatedDimensionMap = new HashMap<>(selectedDimensions.dimensions());
-        updatedDimensionMap.put(LevelStem.OVERWORLD, updatedOverworldStem);
-        return new WorldDimensions(updatedDimensionMap);
     }
 }

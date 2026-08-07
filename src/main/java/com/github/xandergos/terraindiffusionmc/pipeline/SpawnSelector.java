@@ -29,8 +29,8 @@ public final class SpawnSelector {
 
     /**
      * Finds the nearest fully-land coarse pixel to (0, 0) and converts it to a block-space
-     * {@link BlockPos}. Falls back to (0, 64, 0) if no suitable pixel is found within the
-     * configured maximum search region.
+     * {@link BlockPos}. Falls back to the origin above the configured sea level if
+     * no suitable pixel is found within the configured maximum search region.
      */
     public static BlockPos findSpawnBlockPos() {
         int initialSize = TerrainDiffusionConfig.spawnSearchInitialSize();
@@ -71,22 +71,25 @@ public final class SpawnSelector {
     }
 
     /**
-     * Returns the Minecraft block Y for the given block (X, Z), clamped to at least 64.
-     * Falls back to 64 if the heightmap cannot be fetched.
+     * Returns the Minecraft block Y for the given block (X, Z), clamped to at least
+     * one block above the configured sea level. Falls back to that same value if
+     * the heightmap cannot be fetched.
      */
     private static int heightmapY(int blockX, int blockZ) {
+        int minY = TerrainDiffusionConfig.seaLevel() + 1;
         try {
             LocalTerrainProvider.HeightmapData data =
                     LocalTerrainProvider.getInstance().fetchHeightmap(blockZ, blockX, blockZ + 1, blockX + 1);
-            return Math.max(HeightConverter.convertToMinecraftHeight(data.heightmap[0][0]), 64);
+            return Math.max(HeightConverter.convertToMinecraftHeight(data.heightmap[0][0]), minY);
         } catch (Exception e) {
             LOG.error("SpawnSelector: failed to fetch heightmap at ({}, {})", blockX, blockZ, e);
-            return 64;
+            return minY;
         }
     }
 
     /**
-     * Returns a spawn position at block (0, 0) using the heightmap Y, clamped to at least 64.
+     * Returns a spawn position at block (0, 0) using the heightmap Y, clamped to at
+     * least one block above the configured sea level.
      */
     private static BlockPos fallbackToOrigin() {
         LOG.warn("SpawnSelector: falling back to origin (0, ?, 0)");

@@ -1,9 +1,9 @@
 package com.github.xandergos.terraindiffusionmc.world;
 
+import com.github.xandergos.terraindiffusionmc.config.TerrainDiffusionConfig;
 import com.github.xandergos.terraindiffusionmc.pipeline.WorldPipelineModelConfig;
 
 public class HeightConverter {
-    private static final int SEA_LEVEL = 63;
     private static final short MAX_PIPELINE_METERS = 10_000;
 
     private static float getResolutionForScale(int configuredScale) {
@@ -15,6 +15,7 @@ public class HeightConverter {
     }
 
     public static int convertToMinecraftHeight(short meters, int configuredScale) {
+        int seaLevel = TerrainDiffusionConfig.seaLevel();
         int baseY;
         float resolution = getResolutionForScale(configuredScale);
 
@@ -24,7 +25,7 @@ public class HeightConverter {
             baseY = (int) (-Math.sqrt(Math.abs(meters) + 10) + Math.sqrt(10.0)) - 1;
         }
 
-        return baseY + SEA_LEVEL;
+        return baseY + seaLevel;
     }
 
     /**

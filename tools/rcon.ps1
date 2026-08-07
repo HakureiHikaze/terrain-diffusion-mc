@@ -1,5 +1,5 @@
 param(
-    [string]$Server = "127.0.0.1",
+    [string]$Server = "26.119.147.48",
     [int]$Port = 25575,
     [string]$Password = "td-test-2026",
     [Parameter(Mandatory = $true)][string]$Command
@@ -50,6 +50,7 @@ try {
     } while ($resp.Type -ne 0 -and $resp.Type -ne 2)
 
     Write-Output $resp.Payload
-} finally {
+}
+finally {
     $client.Close()
 }

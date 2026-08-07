@@ -8,7 +8,7 @@ import net.minecraft.server.level.ServerLevel;
 public final class WorldScaleManager {
     public static final int DEFAULT_SCALE = 2;
     private static final int MIN_SCALE = 1;
-    public static final int MAX_SCALE = 6;
+    public static final int MAX_SCALE = 15;
 
     private static volatile int currentScale = DEFAULT_SCALE;
 

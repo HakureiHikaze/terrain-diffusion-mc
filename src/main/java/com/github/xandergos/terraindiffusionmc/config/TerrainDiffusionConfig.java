@@ -18,6 +18,9 @@ public final class TerrainDiffusionConfig {
     private static final boolean DEFAULT_VALIDATE_MODEL = true;
     private static final int DEFAULT_EXPLORER_PORT = 19801;
     private static final int DEFAULT_TILE_SIZE = 256;
+    private static final int DEFAULT_SEA_LEVEL = 63;
+    private static final int MIN_SEA_LEVEL = -2032;
+    private static final int MAX_SEA_LEVEL = 2031;
 
     static {
         loadDefaults();
@@ -86,6 +89,19 @@ public final class TerrainDiffusionConfig {
             return DEFAULT_TILE_SIZE;
         }
         return configuredTileSize;
+    }
+
+    /**
+     * Sea level in block coordinates (elevation 0 m maps to this Y).
+     * Default 63 matches vanilla; must stay within the dimension height range.
+     */
+    public static int seaLevel() {
+        int configured = readInt("sea_level", DEFAULT_SEA_LEVEL);
+        if (configured < MIN_SEA_LEVEL || configured > MAX_SEA_LEVEL) {
+            System.err.println("Invalid sea_level: " + configured + ", using default " + DEFAULT_SEA_LEVEL);
+            return DEFAULT_SEA_LEVEL;
+        }
+        return configured;
     }
 
     private static void loadDefaults() {
