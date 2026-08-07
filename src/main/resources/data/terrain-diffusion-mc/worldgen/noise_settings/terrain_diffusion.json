@@ -1,0 +1,31 @@
+{
+    "sea_level":  63,
+    "disable_mob_generation":  false,
+    "legacy_random_source":  false,
+    "default_block":  "minecraft:stone",
+    "default_fluid":  "minecraft:water",
+    "noise":  {
+                  "min_y":  -64,
+                  "height":  2032,
+                  "size_horizontal":  1,
+                  "size_vertical":  2
+              },
+    "noise_router":  {
+                         "temperature":  0,
+                         "vegetation":  0,
+                         "continents":  0,
+                         "erosion":  0,
+                         "depth":  0,
+                         "ridges":  0,
+                         "preliminary_surface_level":  {
+                                                           "type":  "terrain-diffusion-mc:terrain_diffusion"
+                                                       },
+                         "final_density":  {
+                                               "type":  "terrain-diffusion-mc:terrain_diffusion"
+                                           }
+                     },
+    "spawn_target":  [
+
+                     ],
+    "material_rule":  "terrain-diffusion-mc:terrain_diffusion"
+}
