@@ -6,7 +6,8 @@
   "mixins": [
     "BiomeMixin",
     "BiomeSourceMixin",
-    "NoiseBasedChunkGeneratorMixin"
+    "NoiseBasedChunkGeneratorMixin",
+    "NoiseBasedChunkGeneratorFluidMixin"
   ],
   "injectors": {
     "defaultRequire": 1
