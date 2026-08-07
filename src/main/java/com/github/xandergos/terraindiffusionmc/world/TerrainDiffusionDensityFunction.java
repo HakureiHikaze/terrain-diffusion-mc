@@ -4,21 +4,21 @@ import com.github.xandergos.terraindiffusionmc.config.TerrainDiffusionConfig;
 import com.github.xandergos.terraindiffusionmc.pipeline.LocalTerrainProvider;
 import com.github.xandergos.terraindiffusionmc.pipeline.LocalTerrainProvider.HeightmapData;
 import com.mojang.serialization.MapCodec;
-import net.minecraft.util.dynamic.CodecHolder;
-import net.minecraft.world.gen.densityfunction.DensityFunction;
+import net.minecraft.util.Interval;
+import net.minecraft.world.level.levelgen.DensityFunction;
 
+/**
+ * Density function backed by the local terrain diffusion pipeline heightmap.
+ *
+ * <p>Returns {@code targetHeight - y} at every block position; the heightmap is
+ * fetched per 256-block tile and cached by the pipeline provider.
+ */
 public class TerrainDiffusionDensityFunction implements DensityFunction {
     public static final MapCodec<TerrainDiffusionDensityFunction> CODEC =
             MapCodec.unit(TerrainDiffusionDensityFunction::new);
 
-    public static final CodecHolder<TerrainDiffusionDensityFunction> CODEC_HOLDER = CodecHolder.of(CODEC);
-
     @Override
-    public double sample(DensityFunction.NoisePos pos) {
-        return compute(pos);
-    }
-
-    public double compute(DensityFunction.NoisePos context) {
+    public float compute(DensityFunction.FunctionContext context) {
         int x = context.blockX();
         int z = context.blockZ();
         int y = context.blockY();
@@ -39,7 +39,7 @@ public class TerrainDiffusionDensityFunction implements DensityFunction {
             return -y;
         }
 
-        int localX = Math.max(0, Math.min(data.width  - 1, x - blockStartX));
+        int localX = Math.max(0, Math.min(data.width - 1, x - blockStartX));
         int localZ = Math.max(0, Math.min(data.height - 1, z - blockStartZ));
 
         int targetHeight = HeightConverter.convertToMinecraftHeight(data.heightmap[localZ][localX]);
@@ -68,23 +68,23 @@ public class TerrainDiffusionDensityFunction implements DensityFunction {
             this.blockEndZ = blockStartZ + tileSize;
 
             this.data = LocalTerrainProvider.getInstance()
-                .fetchHeightmap(blockStartZ, blockStartX, blockEndZ, blockEndX);
+                    .fetchHeightmap(blockStartZ, blockStartX, blockEndZ, blockEndX);
         }
     }
 
     @Override
-    public void fill(double[] densities, DensityFunction.EachApplier applier) {
-        if (densities.length == 0) return;
+    public void fillArray(float[] output, DensityFunction.ContextProvider contextProvider) {
+        if (output.length == 0) return;
 
         FillContext ctx = new FillContext();
-        DensityFunction.NoisePos pos = applier.at(0);
+        DensityFunction.FunctionContext pos = contextProvider.forIndex(0);
         int x = pos.blockX();
         int z = pos.blockZ();
         int y = pos.blockY();
         ctx.init(x, z);
 
-        for (int i = 0; i < densities.length; i++) {
-            pos = applier.at(i);
+        for (int i = 0; i < output.length; i++) {
+            pos = contextProvider.forIndex(i);
             x = pos.blockX();
             z = pos.blockZ();
             y = pos.blockY();
@@ -92,36 +92,36 @@ public class TerrainDiffusionDensityFunction implements DensityFunction {
 
             HeightmapData data = ctx.data;
             if (data == null || data.heightmap == null) {
-                densities[i] = -y;
+                output[i] = -y;
                 continue;
             }
 
-            int localX = Math.max(0, Math.min(data.width  - 1, x - ctx.blockStartX));
+            int localX = Math.max(0, Math.min(data.width - 1, x - ctx.blockStartX));
             int localZ = Math.max(0, Math.min(data.height - 1, z - ctx.blockStartZ));
 
             int targetHeight = HeightConverter
-                .convertToMinecraftHeight(data.heightmap[localZ][localX]);
-            densities[i] = targetHeight - y;
+                    .convertToMinecraftHeight(data.heightmap[localZ][localX]);
+            output[i] = targetHeight - y;
         }
     }
 
     @Override
-    public DensityFunction apply(DensityFunction.DensityFunctionVisitor visitor) {
+    public DensityFunction mapChildren(DensityFunction.Visitor visitor) {
         return visitor.apply(this);
     }
 
     @Override
-    public double minValue() {
-        return -64;
+    public Interval range() {
+        return Interval.of(-64, 1024);
     }
 
     @Override
-    public double maxValue() {
-        return 1024;
+    public @DensityFunction.Axes int domainAxes() {
+        return DensityFunction.ALL_AXES;
     }
 
     @Override
-    public CodecHolder<? extends DensityFunction> getCodecHolder() {
-        return CODEC_HOLDER;
+    public MapCodec<? extends DensityFunction> codec() {
+        return CODEC;
     }
 }
