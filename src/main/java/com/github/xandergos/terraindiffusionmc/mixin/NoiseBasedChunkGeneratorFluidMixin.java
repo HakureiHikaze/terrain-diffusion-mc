@@ -1,8 +1,8 @@
 package com.github.xandergos.terraindiffusionmc.mixin;
 
 import net.minecraft.SharedConstants;
-import net.minecraft.world.level.DimensionType;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.levelgen.Aquifer;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
