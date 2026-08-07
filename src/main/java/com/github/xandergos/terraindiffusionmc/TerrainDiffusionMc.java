@@ -1,24 +1,74 @@
 package com.github.xandergos.terraindiffusionmc;
 
+import com.github.xandergos.terraindiffusionmc.explorer.ExplorerServer;
+import com.github.xandergos.terraindiffusionmc.pipeline.LocalTerrainProvider;
+import com.github.xandergos.terraindiffusionmc.pipeline.ModelAssetManager;
+import com.github.xandergos.terraindiffusionmc.pipeline.PipelineModels;
+import com.github.xandergos.terraindiffusionmc.world.TerrainDiffusionBiomeSource;
+import com.github.xandergos.terraindiffusionmc.world.TerrainDiffusionDensityFunction;
+import com.github.xandergos.terraindiffusionmc.world.WorldScaleManager;
+import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLevelEvents;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Minimal bootstrap for the 26.3-fabric environment bring-up.
- *
- * <p>The full terrain-diffusion-mc implementation (1.21.11 / yarn) is parked in
- * {@code legacy-src/} and will be ported to the 26.3 (official names) API on top
- * of this branch. This class only proves that the toolchain (Loom 1.17, loader
- * 0.19.3, Fabric API 0.156.3+26.3, Minecraft 26.3-snapshot-7, Java 25) builds
- * and that the client runs.
- */
+import java.net.URI;
+
+import static net.minecraft.commands.Commands.literal;
+
 public class TerrainDiffusionMc implements ModInitializer {
     public static final String MOD_ID = "terrain-diffusion-mc";
     private static final Logger LOG = LoggerFactory.getLogger(TerrainDiffusionMc.class);
 
     @Override
     public void onInitialize() {
-        LOG.info("terrain-diffusion-mc (26.3-fabric stub) initialized");
+        LOG.info("Initializing terrain-diffusion-mc");
+        Registry.register(BuiltInRegistries.BIOME_SOURCE, Identifier.fromNamespaceAndPath(MOD_ID, "terrain_diffusion"), TerrainDiffusionBiomeSource.CODEC);
+        Registry.register(BuiltInRegistries.DENSITY_FUNCTION_TYPE, Identifier.fromNamespaceAndPath(MOD_ID, "terrain_diffusion"), TerrainDiffusionDensityFunction.CODEC);
+
+        ModelAssetManager.ensureAssetsReady();
+        PipelineModels.load();
+
+        ServerLifecycleEvents.SERVER_STARTING.register(server -> LocalTerrainProvider.clearCache());
+
+        ServerLevelEvents.LOAD.register((server, world) -> {
+            if (world.dimension() == Level.OVERWORLD) {
+                WorldScaleManager.initializeForWorld(world);
+                LocalTerrainProvider.init(world.getSeed());
+            }
+        });
+
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> ExplorerServer.stop());
+
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
+                dispatcher.register(literal("td-explore").executes(TerrainDiffusionMc::executeExplore))
+        );
+    }
+
+    private static int executeExplore(CommandContext<CommandSourceStack> ctx) {
+        try {
+            int port = ExplorerServer.startIfNotRunning();
+            String url = "http://localhost:" + port;
+            Component link = Component.literal(url)
+                    .withStyle(s -> s.withClickEvent(new ClickEvent.OpenUrl(URI.create(url)))
+                                      .withUnderlined(true));
+            ctx.getSource().sendSuccess(
+                    () -> Component.literal("Terrain Explorer: ").copy().append(link),
+                    false);
+        } catch (Exception e) {
+            LOG.error("Failed to start terrain explorer", e);
+            ctx.getSource().sendFailure(Component.literal("Failed to start terrain explorer: " + e.getMessage()));
+        }
+        return 1;
     }
 }

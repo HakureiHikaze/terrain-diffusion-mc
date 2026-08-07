@@ -14,6 +14,9 @@
       "com.github.xandergos.terraindiffusionmc.TerrainDiffusionMc"
     ]
   },
+  "mixins": [
+    "terrain-diffusion-mc.mixins.json"
+  ],
   "depends": {
     "fabricloader": ">=${loader_version}",
     "fabric-api": "*",
