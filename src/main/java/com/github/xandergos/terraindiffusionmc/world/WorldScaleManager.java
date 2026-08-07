@@ -1,5 +1,6 @@
 package com.github.xandergos.terraindiffusionmc.world;
 
+import com.github.xandergos.terraindiffusionmc.config.TerrainDiffusionConfig;
 import net.minecraft.server.level.ServerLevel;
 
 /**
@@ -28,7 +29,7 @@ public final class WorldScaleManager {
 
         if (!worldScaleSettingsState.hasExplicitScale()) {
             Integer pendingScale = WorldScaleSelectionState.consumePendingScale();
-            int resolvedScale = pendingScale != null ? pendingScale : DEFAULT_SCALE;
+            int resolvedScale = pendingScale != null ? pendingScale : TerrainDiffusionConfig.scale();
             worldScaleSettingsState.setScale(resolvedScale);
         }
 

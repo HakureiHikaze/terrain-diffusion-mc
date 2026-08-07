@@ -21,6 +21,9 @@ public final class TerrainDiffusionConfig {
     private static final int DEFAULT_SEA_LEVEL = 63;
     private static final int MIN_SEA_LEVEL = -2032;
     private static final int MAX_SEA_LEVEL = 2031;
+    private static final int DEFAULT_SCALE = 2;
+    private static final int MIN_SCALE = 1;
+    private static final int MAX_SCALE = 15;
 
     static {
         loadDefaults();
@@ -100,6 +103,20 @@ public final class TerrainDiffusionConfig {
         if (configured < MIN_SEA_LEVEL || configured > MAX_SEA_LEVEL) {
             System.err.println("Invalid sea_level: " + configured + ", using default " + DEFAULT_SEA_LEVEL);
             return DEFAULT_SEA_LEVEL;
+        }
+        return configured;
+    }
+
+    /**
+     * Initial terrain scale for newly created worlds.
+     * Only applies when the world has no stored scale yet; once a world is
+     * created, its persisted scale overrides this value.
+     */
+    public static int scale() {
+        int configured = readInt("scale", DEFAULT_SCALE);
+        if (configured < MIN_SCALE || configured > MAX_SCALE) {
+            System.err.println("Invalid scale: " + configured + ", using default " + DEFAULT_SCALE);
+            return DEFAULT_SCALE;
         }
         return configured;
     }
