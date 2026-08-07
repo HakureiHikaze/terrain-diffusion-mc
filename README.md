@@ -1,5 +1,41 @@
 # Terrain Diffusion Fabric Mod [[Modrinth]](https://modrinth.com/mod/terrain-diffusion)
 
+> ## 26.3-fabric development branch
+>
+> Port of this mod to Minecraft **26.3-snapshot-7** (Fabric, official names, Java 25).
+>
+> **Environment baseline**
+>
+> | Item | Value |
+> |---|---|
+> | Minecraft | `26.3-snapshot-7` |
+> | Fabric Loader | `0.19.3` (game version normalizes to `26.3-alpha.7`) |
+> | Fabric API | `0.156.3+26.3` |
+> | Loom | `1.17-SNAPSHOT` (Gradle 9.5.1) |
+> | Java | 25 |
+>
+> **Builds** (ONNX Runtime bundled via fabric-loader nested jars, no remapping):
+> ```
+> ./gradlew build              # Windows: DirectML (uses libs/onnxruntime-dml.jar)
+> ./gradlew build -PuseCuda=true
+> ./gradlew build -PuseCpu=true
+> ```
+>
+> **Dev server notes**: to test a real Terrain Diffusion world with `runServer`, set
+> `level-type=terrain-diffusion-mc\:terrain_diffusion` in `run/server.properties`
+> (default `minecraft:normal` silently produces a vanilla world). Structure/biome
+> searches are routed through the coarse-map classifier so world boot does not
+> generate terrain tens of kilometers away; expect ~30-45s boot for a fresh world
+> on DirectML. RCON (`enable-rcon=true`, `rcon.port=25575`) is enabled for
+> monitoring (see `tools/rcon.ps1`). Run order and process hygiene follow
+> `AGENTS.md` (log-file redirection, `--no-daemon`).
+>
+> Known deviations from the 1.21.11 release: density function is float-based
+> (`range()`/`domainAxes()`), spawn is delegated through
+> `ChunkGenerator.getOrigin`, biome search uses coarse classification, and
+> dimension types declare `default_clock` for sleep/time support.
+
+
 #### UPDATE: The research behind this mod has been accepted to SIGGRAPH 2026, the world's premier graphics conference! That means the research was officially peer reviewed and recognized as a significant contribution to the field. Enjoy the mod!
 
 This is a Minecraft Fabric mod integrating [Terrain Diffusion](https://github.com/xandergos/terrain-diffusion).
