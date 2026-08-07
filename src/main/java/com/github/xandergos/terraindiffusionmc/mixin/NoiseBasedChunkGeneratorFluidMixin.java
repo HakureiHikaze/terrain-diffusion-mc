@@ -1,10 +1,13 @@
 package com.github.xandergos.terraindiffusionmc.mixin;
 
+import net.minecraft.SharedConstants;
+import net.minecraft.world.level.DimensionType;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.levelgen.Aquifer;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
+import org.spongepowered.asm.mixin.Overwrite;
 
 /**
  * Keeps the lava/water boundary relative to the world bottom.
@@ -18,9 +21,23 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 @Mixin(NoiseBasedChunkGenerator.class)
 public abstract class NoiseBasedChunkGeneratorFluidMixin {
 
-    @Redirect(method = "createFluidPicker", at = @At(value = "INVOKE", target = "Ljava/lang/Math;min(II)I"))
-    private static int terrainDiffusionMc$lavaThresholdRelativeToBottom(
-            int lavaLevel, int seaLevel, NoiseGeneratorSettings settings) {
-        return Math.min(settings.noiseSettings().minY() + 10, seaLevel);
+    /**
+     * @author terrain-diffusion-mc
+     * @reason lava threshold must follow the world bottom in extreme-height worlds
+     */
+    @Overwrite
+    private static Aquifer.FluidPicker createFluidPicker(final NoiseGeneratorSettings settings) {
+        int lavaLevel = settings.noiseSettings().minY() + 10;
+        Aquifer.FluidStatus lavaStatus = new Aquifer.FluidStatus(lavaLevel, Blocks.LAVA.defaultBlockState());
+        int seaLevel = settings.seaLevel();
+        Aquifer.FluidStatus seaStatus = new Aquifer.FluidStatus(seaLevel, settings.defaultFluid());
+        Aquifer.FluidStatus emptyStatus = new Aquifer.FluidStatus(DimensionType.MIN_Y * 2, Blocks.AIR.defaultBlockState());
+        return (x, y, z) -> {
+            if (SharedConstants.DEBUG_DISABLE_FLUID_GENERATION) {
+                return emptyStatus;
+            } else {
+                return y < Math.min(lavaLevel, seaLevel) ? lavaStatus : seaStatus;
+            }
+        };
     }
 }
