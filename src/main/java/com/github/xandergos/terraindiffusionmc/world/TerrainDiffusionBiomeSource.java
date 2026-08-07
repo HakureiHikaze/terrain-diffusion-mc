@@ -81,8 +81,7 @@ public class TerrainDiffusionBiomeSource extends BiomeSource {
     }
 
     @Override
-    public Holder<Biome> getNoiseBiome(int quartX, int quartY, int quartZ, Climate.Sampler sampler) {
-        requireBiomeIdMap();
+    public Holder<Biome> getNoiseBiome(int quartX, int quartY, int quartZ, Climate.Sampler sampler) {        requireBiomeIdMap();
         Holder<Biome> defaultEntry = biomeIdMap.get((short) 1);
 
         // x, y, z are in quart coordinates (block / 4)
@@ -109,5 +108,14 @@ public class TerrainDiffusionBiomeSource extends BiomeSource {
         }
 
         return defaultEntry;
+    }
+
+    /**
+     * Returns the biome holder for a biome id (see {@code BiomeClassifier} id constants),
+     * or null if the id is not mapped. Used by coarse-map searches.
+     */
+    public Holder<Biome> getBiomeHolderById(short id) {
+        requireBiomeIdMap();
+        return biomeIdMap.get(id);
     }
 }

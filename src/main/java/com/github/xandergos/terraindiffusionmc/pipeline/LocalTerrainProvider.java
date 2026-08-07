@@ -149,6 +149,41 @@ public final class LocalTerrainProvider {
     }
 
     /**
+     * Blocks per coarse-map unit at the current world scale.
+     * 1 coarse unit = 32 * latentCompression native pixels.
+     */
+    public static int blocksPerCoarseUnit() {
+        return SpawnSelector.COARSE_TO_NATIVE * WorldScaleManager.getCurrentScale();
+    }
+
+    /**
+     * Coarse-map biome classification at block coordinates.
+     *
+     * <p>Uses only the coarse tensor (no latent/decoder stages), so it is fast
+     * enough for structure placement and biome-location searches. Returns
+     * {@link BiomeClassifier#PLAINS} if the coarse pixel is unavailable.
+     */
+    public static short classifyCoarseBiome(int blockX, int blockZ) {
+        try {
+            int perUnit = blocksPerCoarseUnit();
+            int ci = Math.floorDiv(blockZ, perUnit);
+            int cj = Math.floorDiv(blockX, perUnit);
+            FloatTensor slice = getPipelineCoarse(ci, cj, ci + 1, cj + 1);
+            float w = slice.data[6];
+            if (w <= 1e-6f) return BiomeClassifier.PLAINS;
+            float elevSqrt = slice.data[0] / w;
+            float temp = slice.data[2] / w;
+            float tempStd = slice.data[3] / w;
+            float precip = slice.data[4] / w;
+            float precipStd = slice.data[5] / w;
+            return CoarseBiomeClassifier.classify(elevSqrt, temp, tempStd, precip, precipStd);
+        } catch (Exception e) {
+            LOG.warn("Coarse biome classification failed at ({}, {}): {}", blockX, blockZ, e.toString());
+            return BiomeClassifier.PLAINS;
+        }
+    }
+
+    /**
      * Change the world seed used by the pipeline and clear all caches.
      * Note: this also affects terrain generation for new Minecraft chunks.
      */

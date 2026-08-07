@@ -23,7 +23,7 @@ public final class SpawnSelector {
      * Coarse pixels to native pixels: 1 coarse unit = 32 * latentCompression native pixels.
      * Matches the conversion used in WorldPipeline#computeClimate.
      */
-    private static final int COARSE_TO_NATIVE = 32 * WorldPipelineModelConfig.latentCompression();
+    static final int COARSE_TO_NATIVE = 32 * WorldPipelineModelConfig.latentCompression();
 
     private SpawnSelector() {}
 
