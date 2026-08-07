@@ -1,5 +1,5 @@
 plugins {
-    id 'fabric-loom' version '1.13-SNAPSHOT'
+    id 'fabric-loom' version "${loom_version}"
     id 'maven-publish'
 }
 
@@ -75,20 +75,21 @@ repositories {
 dependencies {
     // To change the versions see the gradle.properties file
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    // 26.x jars ship pre-renamed with official names; no yarn mappings are used,
+    // and with fabric.loom.disableObfuscation=true Loom provides no mod*/include
+    // remap configurations, so loader/API go on the plain implementation scope.
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
+    // ONNX Runtime per build variant. `include` (remap-bundling) is unavailable in
+    // disableObfuscation mode; runtime bundling strategy to be decided during porting.
     if (useCuda) {
         implementation "com.microsoft.onnxruntime:onnxruntime_gpu:1.20.0"
-        include "com.microsoft.onnxruntime:onnxruntime_gpu:1.20.0"
     } else if (useCpu) {
         implementation "com.microsoft.onnxruntime:onnxruntime:1.20.0"
-        include "com.microsoft.onnxruntime:onnxruntime:1.20.0"
     } else if (useDml) {
         implementation 'com.microsoft.onnxruntime:onnxruntime-dml:1.0'
-        include 'com.microsoft.onnxruntime:onnxruntime-dml:1.0'
     }
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
@@ -122,7 +123,7 @@ processResources {
     }
 }
 
-def targetJavaVersion = 21
+def targetJavaVersion = 25
 tasks.withType(JavaCompile).configureEach {
     // ensure that the encoding is set to UTF-8, no matter what the system default is
     // this fixes some edge cases with special characters not displaying correctly
