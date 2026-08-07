@@ -20,6 +20,11 @@
       "com.github.xandergos.terraindiffusionmc.TerrainDiffusionMc"
     ]
   },
+  "jars": [
+    {
+      "file": "META-INF/jars/onnxruntime.jar"
+    }
+  ],
   "mixins": [
     "terrain-diffusion-mc.mixins.json",
     {

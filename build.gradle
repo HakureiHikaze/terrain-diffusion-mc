@@ -96,12 +96,40 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+// Bundle the variant's ONNX Runtime jar into the mod jar via fabric-loader's
+// nested-jars mechanism (fabric.mod.json "jars" -> META-INF/jars/). Loom's
+// remap `include` configuration is unavailable with disableObfuscation.
+tasks.register('bundleOnnxRuntime') {
+    def outDir = layout.buildDirectory.dir('generated/bundled/META-INF/jars')
+    def onnxJar = providers.provider {
+        configurations.runtimeClasspath.files.find { it.name.toLowerCase().contains('onnxruntime') }
+    }
+    inputs.file(onnxJar)
+    outputs.dir(outDir)
+    doLast {
+        def jarFile = onnxJar.get()
+        if (jarFile == null) {
+            throw new GradleException("onnxruntime jar not found on runtimeClasspath for variant ${buildVariant}")
+        }
+        def dir = outDir.get().asFile
+        dir.mkdirs()
+        copy {
+            from jarFile
+            into dir
+            rename { 'onnxruntime.jar' }
+        }
+        logger.lifecycle("Bundled ONNX Runtime: {} -> META-INF/jars/onnxruntime.jar ({} KB)",
+                jarFile.name, jarFile.length() / 1024)
+    }
+}
+
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
 }
 
 processResources {
     dependsOn 'generateModelAssetManifest'
+    dependsOn 'bundleOnnxRuntime'
     inputs.property "version", project.version
     inputs.property "minecraft_version", project.minecraft_version
     inputs.property "loader_version", project.loader_version
@@ -115,6 +143,9 @@ processResources {
         expand "version": project.version,
                 "minecraft_version": project.minecraft_version,
                 "loader_version": project.loader_version
+    }
+    from(layout.buildDirectory.dir('generated/bundled')) {
+        into ''
     }
     filesMatching("build-variant.properties") {
         expand "build_variant": buildVariant
