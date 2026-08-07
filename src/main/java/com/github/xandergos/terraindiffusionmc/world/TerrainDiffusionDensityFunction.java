@@ -107,12 +107,15 @@ public class TerrainDiffusionDensityFunction implements DensityFunction {
 
     @Override
     public DensityFunction mapChildren(DensityFunction.Visitor visitor) {
-        return visitor.apply(this);
+        // Leaf function without children: mapAll must not recurse into this node.
+        return this;
     }
 
     @Override
     public Interval range() {
-        return Interval.of(-64, 1024);
+        // targetHeight in [-64, 1024], y in [-64, 2032] per noise settings:
+        // min = -64 - 2032 = -2096, max = 1024 - (-64) = 1088
+        return Interval.of(-2096, 1088);
     }
 
     @Override

@@ -4,10 +4,10 @@ import com.github.xandergos.terraindiffusionmc.client.WorldScaleSettingsScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
 import net.minecraft.client.gui.screens.worldselection.WorldCreationUiState;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.levelgen.presets.WorldPreset;
-import net.minecraft.core.registries.Registries;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -30,22 +30,22 @@ public abstract class CreateWorldScreenWorldTabMixin {
             ResourceKey.create(Registries.WORLD_PRESET, Identifier.fromNamespaceAndPath("terrain-diffusion-mc", "terrain_diffusion"));
 
     @Inject(method = "lambda$new$5", at = @At("HEAD"), cancellable = true)
-    private void terrainDiffusionMc$forceCustomizeAvailable(CallbackInfoReturnable<Boolean> cir) {
-        if (isTerrainDiffusionWorldTypeSelected()) {
+    private static void terrainDiffusionMc$forceCustomizeAvailable(CreateWorldScreen screen, CallbackInfoReturnable<Boolean> cir) {
+        if (isTerrainDiffusionWorldTypeSelected(screen)) {
             cir.setReturnValue(true);
         }
     }
 
     @Inject(method = "lambda$new$6", at = @At("HEAD"), cancellable = true)
-    private void terrainDiffusionMc$forceCustomizeVisible(CallbackInfoReturnable<Boolean> cir) {
-        if (isTerrainDiffusionWorldTypeSelected()) {
+    private static void terrainDiffusionMc$forceCustomizeVisible(CreateWorldScreen screen, CallbackInfoReturnable<Boolean> cir) {
+        if (isTerrainDiffusionWorldTypeSelected(screen)) {
             cir.setReturnValue(true);
         }
     }
 
     @Inject(method = "openPresetEditor", at = @At("HEAD"), cancellable = true)
     private void terrainDiffusionMc$openTerrainScaleScreen(CallbackInfo ci) {
-        if (!isTerrainDiffusionWorldTypeSelected()) {
+        if (!isTerrainDiffusionWorldTypeSelected(this$0)) {
             return;
         }
         Minecraft minecraft = Minecraft.getInstance();
@@ -55,8 +55,8 @@ public abstract class CreateWorldScreenWorldTabMixin {
         }
     }
 
-    private boolean isTerrainDiffusionWorldTypeSelected() {
-        WorldCreationUiState uiState = this$0.getUiState();
+    private static boolean isTerrainDiffusionWorldTypeSelected(CreateWorldScreen screen) {
+        WorldCreationUiState uiState = screen.getUiState();
         if (uiState == null) {
             return false;
         }
