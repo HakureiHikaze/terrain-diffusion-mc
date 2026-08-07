@@ -113,7 +113,7 @@ spawn_search.max_size=128
 
 For Terrain Diffusion worlds, click **Customize** in world creation and set:
 
-- `World Scale` (integer `1..6`)
+- `World Scale` (integer `1..15`)
 
 This value is saved with the world save and affects:
 
@@ -121,6 +121,47 @@ This value is saved with the world save and affects:
 - world max height for newly created worlds (assumes tallest point is 10000 real-world meters)
 - 2 is recommended for a good balance of scale and playability. Use 1 for smaller, more compressed worlds.
 - Lower values put more stress on the GPU (Terrain Diffusion runs more often), while higher values put more stress on the CPU (larger world height). Most modern GPUs will be bottlenecked by the CPU around scale 2 or 3.
+
+On a dedicated server, the initial scale for a brand-new world can also be seeded via
+`scale=N` in `config/terrain-diffusion-mc.properties`. Once a world has been created
+(and saved its scale), the per-world value takes precedence over the config.
+
+#### Scale vs. world height reference
+
+Elevation 0 m maps to the configured `sea_level` Y. The pipeline's tallest point is
+assumed to be 10000 m (`maxGeneratedY = sea_level + ⌊10000·scale/30⌋`); the lowest
+generated elevation is ~-10000 m, which the non-linear depth compression maps to
+`sea_level - 97` regardless of scale. All heights below are relative to `sea_level`:
+
+| Scale | Meters/block | Highest Y (rel. sea level) | Lowest Y (rel. sea level) | Total height (blocks) | Fits default ±2032 limit? |
+|---:|---:|---:|---:|---:|---|
+| 1 | 30 | +333 | -97 | 431 | ✔ (needs ≥ 432) |
+| 2 | 15 | +666 | -97 | 764 | ✔ |
+| 3 | 10 | +1000 | -97 | 1098 | ✔ |
+| 4 | 7.5 | +1333 | -97 | 1431 | ✔ |
+| 5 | 6 | +1666 | -97 | 1764 | ✔ |
+| 6 | 5 | +2000 | -97 | 2098 | ✔ |
+| 7 | 4.29 | +2333 | -97 | 2431 | ✔ |
+| 8 | 3.75 | +2666 | -97 | 2764 | ✔ |
+| 9 | 3.33 | +3000 | -97 | 3098 | ✔ |
+| 10 | 3 | +3333 | -97 | 3431 | ✔ |
+| 11 | 2.73 | +3666 | -97 | 3764 | ✔ |
+| 12 | 2.5 | +4000 | -97 | 4098 | ✖ (needs ≥ 4099) |
+| 13 | 2.31 | +4333 | -97 | 4431 | ✖ |
+| 14 | 2.14 | +4666 | -97 | 4764 | ✖ |
+| 15 | 2 | +5000 | -97 | 5098 | ✖ |
+
+> **World height limits** — Minecraft 26.3 supports `Y_SIZE = 4064` (min_y=-2032,
+> max_y=2031) via a datapack. Scales 1-11 fit entirely inside it; scales 12-15
+> exceed it and the tallest mountains get truncated (see the "truncation is
+> expected" note in the port). With the default vanilla world (min_y=-64, max_y=319,
+> 384 blocks) even scale 1 (431 blocks needed) does not fit - an extended-height
+> datapack is required for every scale.
+>
+> **Sea level example** — with the extreme-height datapack
+> (`sea_level=-1904`, min_y=-2032): scale 2 spans Y `-2001..-1238`, scale 6 spans
+> Y `-2001..96`, scale 10 spans Y `-2001..1429`. With vanilla `sea_level=63`:
+> scale 2 spans Y `-34..729`, scale 6 spans Y `-34..2063`.
 
 ## Common Issues
 
