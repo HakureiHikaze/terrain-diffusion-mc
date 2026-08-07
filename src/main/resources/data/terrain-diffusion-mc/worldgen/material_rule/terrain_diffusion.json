@@ -1,23 +1,7 @@
 {
     "type":  "minecraft:sequence",
     "sequence":  [
-                     {
-                         "type":  "minecraft:condition",
-                         "if_true":  {
-                                         "type":  "minecraft:vertical_gradient",
-                                         "random_name":  "minecraft:bedrock_floor",
-                                         "true_at_and_below":  {
-                                                                   "absolute":  -60
-                                                               },
-                                         "false_at_and_above":  {
-                                                                    "absolute":  -55
-                                                                }
-                                     },
-                         "then_run":  {
-                                          "type":  "minecraft:block",
-                                          "result_state":  "minecraft:bedrock"
-                                      }
-                     },
+                     "minecraft:bedrock_floor",
                      {
                          "type":  "minecraft:condition",
                          "if_true":  {
