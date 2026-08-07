@@ -5,7 +5,7 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "BiomeMixin",
-    "MinecraftServerMixin"
+    "NoiseBasedChunkGeneratorMixin"
   ],
   "injectors": {
     "defaultRequire": 1
