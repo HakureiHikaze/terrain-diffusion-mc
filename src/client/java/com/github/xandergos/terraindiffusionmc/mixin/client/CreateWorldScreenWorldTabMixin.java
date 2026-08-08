@@ -56,17 +56,18 @@ public abstract class CreateWorldScreenWorldTabMixin {
         }
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft != null) {
-            minecraft.setScreenAndShow(new WorldScaleSettingsScreen(this$0, resolveMaxScale(this$0)));
+            minecraft.setScreenAndShow(new WorldScaleSettingsScreen(this$0, resolveMaxFitScale(this$0)));
             ci.cancel();
         }
     }
 
     /**
-     * Resolves the maximum scale supported by the selected world preset's
-     * overworld dimension. Falls back to the global maximum when the preset
+     * Resolves the maximum scale that fits entirely in the selected world
+     * preset's overworld dimension. Larger scales remain selectable (with a
+     * truncation warning); falls back to the global maximum when the preset
      * or dimension cannot be resolved.
      */
-    private static int resolveMaxScale(CreateWorldScreen screen) {
+    private static int resolveMaxFitScale(CreateWorldScreen screen) {
         try {
             WorldCreationUiState uiState = screen.getUiState();
             if (uiState == null || uiState.getWorldType() == null) {
@@ -78,7 +79,7 @@ public abstract class CreateWorldScreenWorldTabMixin {
                 return WorldScaleManager.MAX_SCALE;
             }
             DimensionType dimensionType = overworld.get().type().value();
-            return WorldScaleManager.maxScaleForDimension(
+            return WorldScaleManager.maxFitScaleForDimension(
                     dimensionType.minY(), dimensionType.height(), TerrainDiffusionConfig.seaLevel());
         } catch (RuntimeException e) {
             return WorldScaleManager.MAX_SCALE;

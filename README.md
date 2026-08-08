@@ -153,9 +153,12 @@ generated elevation is ~-10000 m, which the non-linear depth compression maps to
 
 > **Bundled dimension** — the mod's own `terrain_diffusion` dimension uses
 > `min_y=-64, height=800` (top Y 735). With the default `sea_level=63`, scales
-> 1-2 fit entirely; scale 3+ is truncated unless an extended-height datapack
-> is used. The mod clamps the selected scale to the actual dimension height:
-> `maxScale = floor((topY − sea_level) · 30 / 10000)`.
+> 1-2 fit entirely; scale 3+ truncates the tallest mountains unless an
+> extended-height datapack is used. The mod allows any scale `1..15` and only
+> warns when it exceeds the dimension's full-fit limit
+> (`fitMax = floor((topY − sea_level) · 30 / 10000)`): the selected value is
+> kept, and truncation is reported in the UI and server log instead of being
+> silently applied or rejected.
 >
 > **World height limits** — Minecraft 26.3 supports `Y_SIZE = 4064` (min_y=-2032,
 > max_y=2031) via a datapack. Scales 1-11 fit entirely inside it; scales 12-15

@@ -1,6 +1,7 @@
 package com.github.xandergos.terraindiffusionmc.client;
 
 import com.github.xandergos.terraindiffusionmc.world.WorldScaleSelectionState;
+import com.github.xandergos.terraindiffusionmc.world.WorldScaleManager;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.StringWidget;
@@ -22,18 +23,22 @@ public final class WorldScaleSettingsScreen extends Screen {
     private static final Component LABEL_TEXT = Component.literal("World Scale");
 
     private final Screen parentScreen;
-    private final int maxScale;
+    private final int fitMaxScale;
     private final Component descriptionText;
     private final Component errorText;
+    private final Component warningText;
     private EditBox scaleTextField;
     private StringWidget validationTextWidget;
+    private boolean warningAccepted = false;
 
-    public WorldScaleSettingsScreen(Screen parentScreen, int maxScale) {
+    public WorldScaleSettingsScreen(Screen parentScreen, int fitMaxScale) {
         super(Component.translatable("terrain-diffusion-mc.world_settings.title"));
         this.parentScreen = parentScreen;
-        this.maxScale = Math.max(1, maxScale);
-        this.descriptionText = Component.literal("Enter an integer value (1-" + this.maxScale + ")");
-        this.errorText = Component.literal("Scale must be an integer between 1 and " + this.maxScale);
+        this.fitMaxScale = Math.max(1, fitMaxScale);
+        this.descriptionText = Component.literal("Enter an integer value (1-" + WorldScaleManager.MAX_SCALE + ")");
+        this.errorText = Component.literal("Scale must be an integer between 1 and " + WorldScaleManager.MAX_SCALE);
+        this.warningText = Component.literal("Scale " + this.fitMaxScale
+                + " and below fits this dimension entirely; higher values will truncate the tallest mountains. Confirm to keep it.");
     }
 
     @Override
@@ -94,8 +99,13 @@ public final class WorldScaleSettingsScreen extends Screen {
         }
         try {
             int selectedScale = Integer.parseInt(rawScaleValue);
-            if (selectedScale < 1 || selectedScale > maxScale) {
+            if (selectedScale < 1 || selectedScale > WorldScaleManager.MAX_SCALE) {
                 validationTextWidget.setMessage(errorText);
+                return;
+            }
+            if (selectedScale > fitMaxScale && !warningAccepted) {
+                warningAccepted = true;
+                validationTextWidget.setMessage(warningText);
                 return;
             }
             WorldScaleSelectionState.setPendingScale(selectedScale);
