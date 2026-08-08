@@ -172,7 +172,7 @@ java {
     sourceCompatibility = javaVersion
     targetCompatibility = javaVersion
     // Only use toolchain if current Java version is less than target
-    // Commented out toolchain to avoid detection issues when Java 21 is already installed
+    // Commented out toolchain to avoid detection issues when the current JDK already matches targetJavaVersion
     // if (JavaVersion.current() < javaVersion) {
     //     toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
     // }

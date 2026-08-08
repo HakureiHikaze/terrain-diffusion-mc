@@ -37,7 +37,14 @@ public final class WorldScaleSettingsState extends SavedData {
      * Type descriptor used by the saved data storage.
      */
     public static final SavedDataType<WorldScaleSettingsState> TYPE =
-            new SavedDataType<>(Identifier.fromNamespaceAndPath("terrain-diffusion-mc", "world_scale_settings"), WorldScaleSettingsState::createDefault, CODEC, null);
+            new SavedDataType<>(
+                    Identifier.fromNamespaceAndPath("terrain-diffusion-mc", "world_scale_settings"),
+                    WorldScaleSettingsState::createDefault,
+                    CODEC,
+                    // Custom data has no dedicated DFU reference; this non-null placeholder satisfies the
+                    // SavedDataStorage contract (readTagFromDisk calls dataFixType().update()). No fixes are
+                    // registered for it, so the update is an identity operation for our own NBT payload.
+                    DataFixTypes.SAVED_DATA_WORLD_GEN_SETTINGS);
 
     /**
      * Returns the currently persisted world scale.
