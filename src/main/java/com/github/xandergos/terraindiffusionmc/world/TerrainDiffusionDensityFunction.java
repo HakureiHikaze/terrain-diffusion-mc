@@ -113,10 +113,13 @@ public class TerrainDiffusionDensityFunction implements DensityFunction {
 
     @Override
     public Interval range() {
-        // Conservative bounds around the configured sea level: dense terrain
-        // can span far below/above the sea plane for extreme scales.
+        // Covers scale 1..15 in the extreme-height world (min_y=-2032, top 2031):
+        // density = targetHeight - y with targetHeight in [seaLevel-97, seaLevel+5000]
+        // and y in [-2032, 2031]:
+        //   min = (seaLevel - 97) - 2031 = seaLevel - 2128
+        //   max = (seaLevel + 5000) - (-2032) = seaLevel + 7032
         int seaLevel = TerrainDiffusionConfig.seaLevel();
-        return Interval.of(seaLevel - 4096, seaLevel + 4096);
+        return Interval.of(seaLevel - 2128, seaLevel + 7032);
     }
 
     @Override
