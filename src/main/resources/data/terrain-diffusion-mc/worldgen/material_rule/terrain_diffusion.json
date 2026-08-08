@@ -194,7 +194,13 @@
                                 {
                                     "type": "minecraft:condition",
                                     "if_true": {
-                                        "type": "minecraft:not_underwater"
+                                        "type": "minecraft:not",
+                                        "invert": {
+                                            "type": "minecraft:water",
+                                            "offset": 0,
+                                            "surface_depth_multiplier": 0,
+                                            "add_stone_depth": false
+                                        }
                                     },
                                     "then_run": {
                                         "type": "minecraft:condition",

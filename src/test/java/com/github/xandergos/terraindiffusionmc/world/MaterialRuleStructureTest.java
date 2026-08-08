@@ -34,11 +34,14 @@ class MaterialRuleStructureTest {
         JsonObject surfaceSequence = surfaceWrapper.getAsJsonObject("then_run");
         assertEquals("minecraft:sequence", surfaceSequence.get("type").getAsString());
 
-        // grass_block must be reachable only under a not_underwater condition.
+        // grass_block must be reachable only under not(water): 26.3 has no
+        // not_underwater condition type, so the datapack uses "not" + "water".
         JsonElement grassBlock = findBlockRule(surfaceSequence, "minecraft:grass_block");
         assertNotNull(grassBlock, "grass_block rule missing");
-        JsonObject parentCondition = findEnclosingCondition(root, grassBlock, "minecraft:not_underwater");
-        assertNotNull(parentCondition, "grass_block rule is not guarded by not_underwater");
+        JsonObject parentCondition = findEnclosingCondition(root, grassBlock, "minecraft:not");
+        assertNotNull(parentCondition, "grass_block rule is not guarded by not(water)");
+        JsonObject invert = parentCondition.getAsJsonObject("if_true").getAsJsonObject("invert");
+        assertEquals("minecraft:water", invert.get("type").getAsString());
     }
 
     private static JsonObject readMaterialRule() {
