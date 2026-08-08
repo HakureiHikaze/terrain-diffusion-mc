@@ -26,6 +26,9 @@ public class TerrainDiffusionBiomeSource extends BiomeSource {
     private static final ResourceKey<Biome> FOREST_SPARSE = ResourceKey.create(Registries.BIOME, Identifier.fromNamespaceAndPath("terrain-diffusion-mc", "forest_sparse"));
     private static final ResourceKey<Biome> TAIGA_SPARSE = ResourceKey.create(Registries.BIOME, Identifier.fromNamespaceAndPath("terrain-diffusion-mc", "taiga_sparse"));
     private static final ResourceKey<Biome> SNOWY_TAIGA_SPARSE = ResourceKey.create(Registries.BIOME, Identifier.fromNamespaceAndPath("terrain-diffusion-mc", "snowy_taiga_sparse"));
+    // Custom grove so the mod's high-altitude climate band does not globally
+    // override the vanilla grove biome for non-Terrain-Diffusion worlds.
+    private static final ResourceKey<Biome> GROVE = ResourceKey.create(Registries.BIOME, Identifier.fromNamespaceAndPath("terrain-diffusion-mc", "grove"));
 
     public static final MapCodec<TerrainDiffusionBiomeSource> CODEC = RecordCodecBuilder.mapCodec((instance) ->
             instance.group(
@@ -59,7 +62,7 @@ public class TerrainDiffusionBiomeSource extends BiomeSource {
                     entry((short) 23, this.biomeLookup.getOrThrow(Biomes.JUNGLE)),
                     entry((short) 26, this.biomeLookup.getOrThrow(Biomes.BADLANDS)),
                     entry((short) 29, this.biomeLookup.getOrThrow(Biomes.MEADOW)),
-                    entry((short) 31, this.biomeLookup.getOrThrow(Biomes.GROVE)),
+                    entry((short) 31, this.biomeLookup.getOrThrow(GROVE)),
                     entry((short) 32, this.biomeLookup.getOrThrow(Biomes.SNOWY_SLOPES)),
                     entry((short) 33, this.biomeLookup.getOrThrow(Biomes.FROZEN_PEAKS)),
                     entry((short) 35, this.biomeLookup.getOrThrow(Biomes.STONY_PEAKS)),
