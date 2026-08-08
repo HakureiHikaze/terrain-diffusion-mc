@@ -1,7 +1,7 @@
 package com.github.xandergos.terraindiffusionmc.client;
 
-import com.github.xandergos.terraindiffusionmc.world.WorldScaleManager;
 import com.github.xandergos.terraindiffusionmc.world.WorldScaleSelectionState;
+import com.github.xandergos.terraindiffusionmc.world.WorldScaleManager;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.StringWidget;
@@ -21,16 +21,24 @@ public final class WorldScaleSettingsScreen extends Screen {
     private static final int BUTTON_HEIGHT = 20;
 
     private static final Component LABEL_TEXT = Component.literal("World Scale");
-    private static final Component DESCRIPTION_TEXT = Component.literal("Enter an integer value (1-" + WorldScaleManager.MAX_SCALE + ")");
-    private static final Component ERROR_TEXT = Component.literal("Scale must be an integer between 1 and " + WorldScaleManager.MAX_SCALE);
 
     private final Screen parentScreen;
+    private final int fitMaxScale;
+    private final Component descriptionText;
+    private final Component errorText;
+    private final Component warningText;
     private EditBox scaleTextField;
     private StringWidget validationTextWidget;
+    private boolean warningAccepted = false;
 
-    public WorldScaleSettingsScreen(Screen parentScreen) {
+    public WorldScaleSettingsScreen(Screen parentScreen, int fitMaxScale) {
         super(Component.translatable("terrain-diffusion-mc.world_settings.title"));
         this.parentScreen = parentScreen;
+        this.fitMaxScale = Math.max(1, fitMaxScale);
+        this.descriptionText = Component.literal("Enter an integer value (1-" + WorldScaleManager.MAX_SCALE + ")");
+        this.errorText = Component.literal("Scale must be an integer between 1 and " + WorldScaleManager.MAX_SCALE);
+        this.warningText = Component.literal("Scale " + this.fitMaxScale
+                + " and below fits this dimension entirely; higher values will truncate the tallest mountains. Confirm to keep it.");
     }
 
     @Override
@@ -40,7 +48,7 @@ public final class WorldScaleSettingsScreen extends Screen {
 
         addCenteredTextWidget(this.title, centerX, 20, 0xFFFFFF);
 
-        addCenteredTextWidget(DESCRIPTION_TEXT, centerX, centerY - 34, 0xAAAAAA);
+        addCenteredTextWidget(descriptionText, centerX, centerY - 34, 0xAAAAAA);
         addCenteredTextWidget(LABEL_TEXT, centerX, centerY - 22, 0xFFFFFF);
 
         scaleTextField = new EditBox(this.font,
@@ -86,19 +94,24 @@ public final class WorldScaleSettingsScreen extends Screen {
     private void onDonePressed() {
         String rawScaleValue = scaleTextField.getValue().trim();
         if (rawScaleValue.isEmpty()) {
-            validationTextWidget.setMessage(ERROR_TEXT);
+            validationTextWidget.setMessage(errorText);
             return;
         }
         try {
             int selectedScale = Integer.parseInt(rawScaleValue);
             if (selectedScale < 1 || selectedScale > WorldScaleManager.MAX_SCALE) {
-                validationTextWidget.setMessage(ERROR_TEXT);
+                validationTextWidget.setMessage(errorText);
+                return;
+            }
+            if (selectedScale > fitMaxScale && !warningAccepted) {
+                warningAccepted = true;
+                validationTextWidget.setMessage(warningText);
                 return;
             }
             WorldScaleSelectionState.setPendingScale(selectedScale);
             onClose();
         } catch (NumberFormatException exception) {
-            validationTextWidget.setMessage(ERROR_TEXT);
+            validationTextWidget.setMessage(errorText);
         }
     }
 }

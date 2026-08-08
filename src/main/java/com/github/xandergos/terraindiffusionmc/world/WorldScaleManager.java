@@ -45,6 +45,7 @@ public final class WorldScaleManager {
                 .withSuffix(".dat")
                 .resolveAgainst(dimensionDataFolder);
         boolean settingsFileExists = Files.exists(settingsFile);
+        int fitMaxScale = maxFitScaleForLevel(serverLevel);
 
         WorldScaleSettingsState worldScaleSettingsState = savedDataStorage.computeIfAbsent(WorldScaleSettingsState.TYPE);
 
@@ -56,10 +57,14 @@ public final class WorldScaleManager {
             }
             Integer pendingScale = WorldScaleSelectionState.consumePendingScale();
             int resolvedScale = pendingScale != null ? pendingScale : TerrainDiffusionConfig.scale();
-            worldScaleSettingsState.setScale(resolvedScale);
+            int clampedScale = clampScale(resolvedScale);
+            warnIfExceedsFit(clampedScale, fitMaxScale, serverLevel, "selected/config");
+            worldScaleSettingsState.setScale(clampedScale);
         }
 
-        currentScale = clampScale(worldScaleSettingsState.getScale());
+        int loadedScale = clampScale(worldScaleSettingsState.getScale());
+        warnIfExceedsFit(loadedScale, fitMaxScale, serverLevel, "persisted");
+        currentScale = loadedScale;
         LOG.info("World scale for '{}' loaded: {} (explicit={})",
                 serverLevel.dimension().identifier(), currentScale, worldScaleSettingsState.hasExplicitScale());
     }
@@ -76,6 +81,7 @@ public final class WorldScaleManager {
      */
     public static void setCurrentScale(ServerLevel serverLevel, int configuredScale) {
         int clampedScale = clampScale(configuredScale);
+        warnIfExceedsFit(clampedScale, maxFitScaleForLevel(serverLevel), serverLevel, "requested");
         WorldScaleSettingsState worldScaleSettingsState = serverLevel.getChunkSource()
                 .getDataStorage()
                 .computeIfAbsent(WorldScaleSettingsState.TYPE);
@@ -88,5 +94,40 @@ public final class WorldScaleManager {
      */
     public static int clampScale(int configuredScale) {
         return Math.max(MIN_SCALE, Math.min(MAX_SCALE, configuredScale));
+    }
+
+    /**
+     * Maximum terrain scale that fits entirely inside the given dimension extent.
+     *
+     * <p>Elevation 0 m maps to {@code seaLevel}; the pipeline's tallest point is
+     * 10000 m, so scale {@code s} reaches {@code seaLevel + floor(10000*s/30)}.
+     * The limit is therefore {@code floor((topY - seaLevel) * 30 / 10000)}.
+     * The lowest generated elevation (seaLevel - 97) is a fixed offset that the
+     * mod's bundled dimensions satisfy; the top constraint is the binding one.
+     *
+     * <p>This is a "fits entirely" advisory limit, not a hard cap: players may
+     * still select larger scales (up to {@link #MAX_SCALE}) and the mod will
+     * warn that the tallest mountains get truncated.
+     */
+    public static int maxFitScaleForDimension(int minY, int height, int seaLevel) {
+        int topY = minY + height - 1;
+        int fitMaxScale = Math.floorDiv((topY - seaLevel) * 30, 10000);
+        return Math.max(MIN_SCALE, Math.min(MAX_SCALE, fitMaxScale));
+    }
+
+    private static int maxFitScaleForLevel(ServerLevel serverLevel) {
+        DimensionType dimensionType = serverLevel.dimensionType();
+        return maxFitScaleForDimension(dimensionType.minY(), dimensionType.height(), TerrainDiffusionConfig.seaLevel());
+    }
+
+    private static void warnIfExceedsFit(int scale, int fitMaxScale, ServerLevel serverLevel, String context) {
+        if (scale > fitMaxScale) {
+            LOG.warn("World scale {} ({}) exceeds the maximum {} that fits entirely in '{}' dimension "
+                            + "(minY={}, height={}, sea_level={}); keeping {} at runtime, but the tallest "
+                            + "mountains will be truncated",
+                    scale, context, fitMaxScale, serverLevel.dimension().identifier(),
+                    serverLevel.dimensionType().minY(), serverLevel.dimensionType().height(),
+                    TerrainDiffusionConfig.seaLevel(), scale);
+        }
     }
 }
