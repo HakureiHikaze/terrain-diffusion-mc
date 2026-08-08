@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Random;
 import java.util.Comparator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -148,7 +147,10 @@ public final class LocalTerrainProvider {
                 TerrainShaping.apply(elev, i1, j1, H, W, NATIVE_RESOLUTION);
 
                 if (climate != null) {
-                    short[] gating = BiomeClassifier.classify(elev, climate, i1, j1, elev, H, W, NATIVE_RESOLUTION);
+                    // BiomeClassifier needs a (H+2)x(W+2) padded elevation for its coastal
+                    // neighbourhood check; build it by edge-clamping the fetched region.
+                    float[] elevPadded = padElevation(elev, H, W);
+                    short[] gating = BiomeClassifier.classify(elev, climate, i1, j1, elevPadded, H, W, NATIVE_RESOLUTION);
                     WonderGenerator.apply(elev, gating, i1, j1, H, W, NATIVE_RESOLUTION, getSeed());
                 }
 
@@ -156,6 +158,20 @@ public final class LocalTerrainProvider {
             }
             return data;
         });
+    }
+
+    /** Edge-clamped (H+2)x(W+2) copy of a flat (H)x(W) elevation, for BiomeClassifier. */
+    private static float[] padElevation(float[] elev, int H, int W) {
+        int PW = W + 2;
+        float[] padded = new float[(H + 2) * PW];
+        for (int r = 0; r < H + 2; r++) {
+            int sr = Math.max(0, Math.min(H - 1, r - 1));
+            for (int c = 0; c < PW; c++) {
+                int sc = Math.max(0, Math.min(W - 1, c - 1));
+                padded[r * PW + c] = elev[sr * W + sc];
+            }
+        }
+        return padded;
     }
 
     /**
@@ -239,15 +255,9 @@ public final class LocalTerrainProvider {
             instanceSeed = newSeed;
             CACHE.clear();
             PENDING.clear();
+            SpawnSelector.invalidateSpawnCache();
             return null;
         });
-    }
-
-    /** Change to a random new seed; returns the new seed value. */
-    public static long generateRandomSeedFromExplorer() throws Exception {
-        long newSeed = new Random().nextLong();
-        changeSeedFromExplorer(newSeed);
-        return newSeed;
     }
 
     private static <T> T submitToInferenceThread(Callable<T> task) throws Exception {

@@ -25,7 +25,30 @@ public final class SpawnSelector {
      */
     private static final int COARSE_TO_NATIVE = 32 * WorldPipelineModelConfig.latentCompression();
 
+    /** Last spawn found (cached for the explorer's /api/spawn; recomputed on seed change). */
+    private static volatile BlockPos cachedSpawn = null;
+
     private SpawnSelector() {}
+
+    /**
+     * Returns the current world spawn: the cached value if present, otherwise computes it.
+     */
+    public static BlockPos getSpawnBlockPos() {
+        BlockPos cached = cachedSpawn;
+        if (cached != null) {
+            return cached;
+        }
+        BlockPos computed = findSpawnBlockPos();
+        cachedSpawn = computed;
+        return computed;
+    }
+
+    /**
+     * Clears the cached spawn (called when the world seed changes) so the next query recomputes it.
+     */
+    public static void invalidateSpawnCache() {
+        cachedSpawn = null;
+    }
 
     /**
      * Finds the nearest fully-land coarse pixel to (0, 0) and converts it to a block-space
@@ -60,6 +83,7 @@ public final class SpawnSelector {
             BlockPos candidate = findNearestLandPixel(coarse, H, W, ci0, cj0, scale);
             if (candidate != null) {
                 LOG.info("SpawnSelector: found land spawn at {} (coarse region {}x{})", candidate, regionSize, regionSize);
+                cachedSpawn = candidate;
                 return candidate;
             }
 
@@ -67,7 +91,9 @@ public final class SpawnSelector {
         }
 
         LOG.warn("SpawnSelector: no land found within max coarse region {}x{}, falling back to origin", maxSize, maxSize);
-        return fallbackToOrigin();
+        BlockPos fallback = fallbackToOrigin();
+        cachedSpawn = fallback;
+        return fallback;
     }
 
     /**

@@ -3,6 +3,7 @@ package com.github.xandergos.terraindiffusionmc.explorer;
 import com.github.xandergos.terraindiffusionmc.config.TerrainDiffusionConfig;
 import com.github.xandergos.terraindiffusionmc.infinitetensor.FloatTensor;
 import com.github.xandergos.terraindiffusionmc.pipeline.LocalTerrainProvider;
+import com.github.xandergos.terraindiffusionmc.pipeline.SpawnSelector;
 import com.github.xandergos.terraindiffusionmc.pipeline.WorldPipelineModelConfig;
 import com.github.xandergos.terraindiffusionmc.world.WorldScaleManager;
 import com.google.gson.Gson;
@@ -65,7 +66,7 @@ public final class ExplorerServer {
         server.createContext("/", ExplorerServer::handleRoot);
         server.createContext("/api/status", ExplorerServer::handleStatus);
         server.createContext("/api/seed", ExplorerServer::handleSeed);
-        server.createContext("/api/new_seed", ExplorerServer::handleNewSeed);
+        server.createContext("/api/spawn", ExplorerServer::handleSpawn);
         server.createContext("/api/coarse.png", ExplorerServer::handleCoarsePng);
         server.createContext("/api/coarse_data.json", ExplorerServer::handleCoarseData);
         server.createContext("/api/coarse_stats", ExplorerServer::handleCoarseStats);
@@ -138,7 +139,7 @@ public final class ExplorerServer {
         }
     }
 
-    /** POST /api/seed body={seed:int} → {seed} */
+    /** POST /api/seed body={seed:int-or-string} → {seed} */
     private static void handleSeed(HttpExchange ex) throws IOException {
         if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { send405(ex); return; }
         try {
@@ -146,7 +147,13 @@ public final class ExplorerServer {
             @SuppressWarnings("unchecked")
             Map<String, Object> data = GSON.fromJson(body, Map.class);
             if (!data.containsKey("seed")) { sendError(ex, 400, "seed required"); return; }
-            long newSeed = ((Number) data.get("seed")).longValue();
+            Object seedVal = data.get("seed");
+            long newSeed;
+            if (seedVal instanceof Number) {
+                newSeed = ((Number) seedVal).longValue();
+            } else {
+                newSeed = Long.parseLong(String.valueOf(seedVal).trim());
+            }
             LocalTerrainProvider.changeSeedFromExplorer(newSeed);
             Map<String, Object> resp = new LinkedHashMap<>();
             resp.put("seed", Long.toUnsignedString(LocalTerrainProvider.getSeed()));
@@ -156,16 +163,18 @@ public final class ExplorerServer {
         }
     }
 
-    /** POST /api/new_seed → {seed} */
-    private static void handleNewSeed(HttpExchange ex) throws IOException {
-        if (!ex.getRequestMethod().equalsIgnoreCase("POST")) { send405(ex); return; }
+    /** GET /api/spawn → {x, y, z} (current world spawn; cached, recomputed on seed change). */
+    private static void handleSpawn(HttpExchange ex) throws IOException {
+        if (!ex.getRequestMethod().equalsIgnoreCase("GET")) { send405(ex); return; }
         try {
-            long newSeed = LocalTerrainProvider.generateRandomSeedFromExplorer();
+            net.minecraft.core.BlockPos spawn = SpawnSelector.getSpawnBlockPos();
             Map<String, Object> resp = new LinkedHashMap<>();
-            resp.put("seed", Long.toUnsignedString(newSeed));
+            resp.put("x", spawn.getX());
+            resp.put("y", spawn.getY());
+            resp.put("z", spawn.getZ());
             sendJson(ex, 200, resp);
         } catch (Exception e) {
-            sendError(ex, 400, e.getMessage());
+            sendError(ex, 500, e.getMessage());
         }
     }
 

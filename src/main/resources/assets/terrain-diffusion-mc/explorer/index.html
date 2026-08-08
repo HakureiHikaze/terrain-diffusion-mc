@@ -91,14 +91,14 @@
   .fch-name { font-weight: 600; font-size: 12px; }
   .fch-vals { display: flex; justify-content: space-between; font-size: 11px; font-family: monospace; color: var(--accent); margin-top: 4px; }
 
-  .dual-range { position: relative; height: 20px; }
-  .dual-range .track-bg { position: absolute; top: 9px; left: 0; right: 0; height: 3px; background: var(--track); border-radius: 2px; pointer-events: none; }
-  .dual-range .track-fill { position: absolute; top: 9px; height: 3px; background: var(--accent); border-radius: 2px; pointer-events: none; }
-  .dual-range input[type="range"] { position: absolute; width: 100%; height: 20px; top: 0; background: transparent; pointer-events: none; -webkit-appearance: none; appearance: none; outline: none; }
-  .dual-range input[type="range"]::-webkit-slider-thumb { pointer-events: all; -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--accent), 0 2px 6px var(--accent-glow); transition: transform var(--transition); }
-  .dual-range input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
-  .dual-range input[type="range"]::-moz-range-thumb { pointer-events: all; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--bg); }
-  .dual-range input[type="range"]:disabled::-webkit-slider-thumb { background: var(--muted); box-shadow: none; }
+  .dual-range { position: relative; height: 24px; margin: 2px 0; }
+  .dual-range .track-bg { position: absolute; top: 10px; left: 0; right: 0; height: 4px; background: var(--track); border-radius: 2px; pointer-events: none; }
+  .dual-range .track-fill { position: absolute; top: 10px; height: 4px; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); border-radius: 2px; pointer-events: none; box-shadow: 0 0 6px var(--accent-glow); }
+  .dual-range input[type="range"] { position: absolute; width: 100%; height: 24px; top: 0; margin: 0; background: transparent; pointer-events: none; -webkit-appearance: none; appearance: none; outline: none; }
+  .dual-range input[type="range"]::-webkit-slider-thumb { pointer-events: all; -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--text); cursor: grab; border: 2px solid var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 2px 8px rgba(0,0,0,.5); transition: transform var(--transition), background var(--transition); }
+  .dual-range input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); background: var(--accent); cursor: grabbing; }
+  .dual-range input[type="range"]::-moz-range-thumb { pointer-events: all; width: 12px; height: 12px; border-radius: 50%; background: var(--text); cursor: grab; border: 2px solid var(--accent); }
+  .dual-range input[type="range"]:disabled::-webkit-slider-thumb { background: var(--muted); border-color: var(--muted); box-shadow: none; }
 
   .fch-hint { font-size: 10px; color: var(--muted); text-align: center; padding: 4px 0 2px; }
 
@@ -150,6 +150,12 @@
   button.fch-clear { padding: 0 6px; font-size: 14px; line-height: 1; color: var(--muted); background: transparent; border: none; min-width: 20px; border-radius: 3px; }
   button.fch-clear:hover { color: var(--text); background: var(--accent-dim); }
 
+  .size-select { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 11px; padding: 3px 4px; outline: none; cursor: pointer; }
+  .size-select:hover { border-color: var(--accent); }
+
+  .spawn-row { display: flex; align-items: center; gap: 6px; font-size: 11px; font-family: monospace; }
+  .spawn-row .coord-xy-val { color: var(--accent); }
+
   .status-bar { background: var(--surface); border-top: 1px solid var(--border); padding: 3px 14px; color: var(--muted); font-size: 11px; font-family: monospace; flex-shrink: 0; display: flex; align-items: center; gap: 12px; }
   .status-hint { margin-left: auto; color: var(--text-dim); }
 
@@ -196,8 +202,13 @@
         <div class="seed-row">
           <input type="number" id="seed-input" data-i18n-placeholder="seed.placeholder" placeholder="Enter seed…">
           <button id="btn-set-seed" class="primary" data-i18n="seed.set">Set</button>
+          <button id="btn-current-seed" data-i18n="seed.current" title="Restore current seed">Current</button>
         </div>
-        <button id="btn-new-seed" data-i18n="seed.random">🎲  Random</button>
+        <div class="spawn-row" id="spawn-row" style="display:none">
+          <span class="coord-xy-lbl" data-i18n="seed.spawn">Spawn</span>
+          <span class="coord-xy-val" id="spawn-display">—</span>
+          <button id="btn-copy-spawn" class="fch-clear" title="Copy /tp" style="margin-left:auto">⧉</button>
+        </div>
       </div>
     </div>
 
@@ -257,6 +268,11 @@
         <button class="active" id="mode-relief" data-i18n="mode.relief">Relief</button>
         <button id="mode-elevation" data-i18n="mode.elev">Elev</button>
         <button id="mode-temperature" data-i18n="mode.temp">Temp</button>
+        <select id="detail-size" class="size-select" title="Detail size">
+          <option value="256">256</option>
+          <option value="512" selected>512</option>
+          <option value="1024">1024</option>
+        </select>
         <span class="panel-info" id="detail-info" data-i18n="map.detail_info">click coarse to load</span>
       </div>
       <div class="nav-grid">
@@ -285,13 +301,14 @@
   const COARSE_WINDOW_MIN = 8;
   const COARSE_WINDOW_MAX = 120;
   const DETAIL_PAN_STEP = 256;
-  const DETAIL_SIZE = 1024;
+  let DETAIL_SIZE = 512;  // mutable: detail map side length (256/512/1024)
 
   const I18N = {
     en: {
       "app.title": "Terrain Diffusion",
       "sec.seed": "Seed", "sec.channel": "Coarse Channel", "sec.filter": "Filter", "sec.coords": "Coordinates",
-      "seed.placeholder": "Enter seed…", "seed.set": "Set", "seed.random": "🎲  Random",
+      "seed.placeholder": "Enter seed…", "seed.set": "Set", "seed.current": "Current",
+      "seed.spawn": "Spawn",
       "filter.enable": "Enable filter", "filter.stats": "Load Stats for Sliders", "filter.hint": "Click \"Load Stats\" for ranges",
       "mode.relief": "Relief", "mode.elev": "Elev", "mode.temp": "Temp",
       "map.coarse": "Coarse Map", "map.detail": "Detail Map",
@@ -305,7 +322,7 @@
       "status.connecting": "Connecting…",
       "status.connected": "Seed {0}  |  scale {1}×",
       "status.connect_fail": "Connection failed — is the Minecraft client running?",
-      "status.seed_set": "Seed set to {0}", "status.new_seed": "New seed: {0}",
+      "status.seed_set": "Seed set to {0}",
       "status.tile": "Tile ci={0}, cj={1}", "status.stats": "Stats — {0}",
       "status.coarse_error": "Coarse map load error", "status.detail_error": "Detail map load error",
       "hint.shortcuts": "Drag to pan  |  ←↑↓→  +/-  C/Z  W/A/S/D",
@@ -317,7 +334,8 @@
     zh: {
       "app.title": "地形扩散探索器",
       "sec.seed": "种子", "sec.channel": "粗图通道", "sec.filter": "过滤器", "sec.coords": "坐标",
-      "seed.placeholder": "输入种子…", "seed.set": "设置", "seed.random": "🎲  随机",
+      "seed.placeholder": "输入种子…", "seed.set": "设置", "seed.current": "当前",
+      "seed.spawn": "出生点",
       "filter.enable": "启用过滤", "filter.stats": "加载滑块统计数据", "filter.hint": "点击「加载滑块统计数据」获取范围",
       "mode.relief": "地形", "mode.elev": "高程", "mode.temp": "温度",
       "map.coarse": "粗图", "map.detail": "细节图",
@@ -331,7 +349,7 @@
       "status.connecting": "连接中…",
       "status.connected": "种子 {0}  |  比例 {1}×",
       "status.connect_fail": "连接失败 — Minecraft 客户端是否正在运行？",
-      "status.seed_set": "种子已设为 {0}", "status.new_seed": "新种子: {0}",
+      "status.seed_set": "种子已设为 {0}",
       "status.tile": "瓦片 ci={0}, cj={1}", "status.stats": "统计 — {0}",
       "status.coarse_error": "粗图加载失败", "status.detail_error": "细节图加载失败",
       "hint.shortcuts": "拖拽平移  |  ←↑↓→  +/-  C/Z  W/A/S/D",
@@ -343,7 +361,7 @@
   };
 
   const state = {
-    seed: null, channel: 0, channels: [],
+    seed: null, currentSeed: null, channel: 0, channels: [],
     nativeResolution: null, coordScale: 1,
     coarseOffsetI: 0, coarseOffsetJ: 0, coarseWindow: 50,
     coarseData: null,
@@ -365,7 +383,11 @@
   const seedDisplay     = document.getElementById('seed-display');
   const seedInput       = document.getElementById('seed-input');
   const btnSetSeed      = document.getElementById('btn-set-seed');
-  const btnNewSeed      = document.getElementById('btn-new-seed');
+  const btnCurrentSeed  = document.getElementById('btn-current-seed');
+  const spawnRow        = document.getElementById('spawn-row');
+  const spawnDisplay    = document.getElementById('spawn-display');
+  const btnCopySpawn    = document.getElementById('btn-copy-spawn');
+  const detailSizeSel   = document.getElementById('detail-size');
   const channelButtons  = document.getElementById('channel-buttons');
   const filterEnable    = document.getElementById('filter-enable');
   const filterChannels  = document.getElementById('filter-channels');
@@ -475,9 +497,18 @@
       maxVal.textContent = hi.toFixed(prec) + unit;
     }
 
-    minEl.addEventListener('input', () => { if (parseFloat(minEl.value) > parseFloat(maxEl.value)) maxEl.value = minEl.value; upd(); debouncedLoadCoarse(); });
-    maxEl.addEventListener('input', () => { if (parseFloat(maxEl.value) < parseFloat(minEl.value)) minEl.value = maxEl.value; upd(); debouncedLoadCoarse(); });
-    div.querySelector('.fch-clear').addEventListener('click', () => { minEl.value = minEl.min; maxEl.value = minEl.max; upd(); debouncedLoadCoarse(); });
+    function onSlide(which) {
+      filterEnable.checked = true;           // dragging a slider activates the filter
+      const lo = parseFloat(minEl.value), hi = parseFloat(maxEl.value);
+      const rangeMin = parseFloat(minEl.min), rangeMax = parseFloat(minEl.max);
+      const gap = Math.max(step, (rangeMax - rangeMin) * 0.02);  // keep a gap between thumbs
+      if (which === 'min') minEl.value = Math.min(lo, hi - gap);
+      else maxEl.value = Math.max(hi, lo + gap);
+      upd(); debouncedLoadCoarse();
+    }
+    minEl.addEventListener('input', () => onSlide('min'));
+    maxEl.addEventListener('input', () => onSlide('max'));
+    div.querySelector('.fch-clear').addEventListener('click', () => { minEl.value = minEl.min; maxEl.value = maxEl.max; upd(); debouncedLoadCoarse(); });
     upd();
   });
 
@@ -513,19 +544,33 @@
   }
 
   let _lastDetailRC = null;
+
+  // Meters → Minecraft Y (matches HeightConverter: sea level 63, sqrt compression below).
+  function metersToMcY(meters, scale, res) {
+    const resPerBlock = res / scale;
+    let baseY;
+    if (meters >= 0) {
+      baseY = Math.round(meters / resPerBlock);
+    } else {
+      baseY = Math.round(-Math.sqrt(Math.abs(meters) + 10) + Math.sqrt(10)) - 1;
+    }
+    return baseY + 63;
+  }
+
   function showDetailCoords(r, c) {
     if (state.detailCI === null || !state.detailRaw) return;
     _lastDetailRC = { r, c };
     const { detailCI: ci, detailCJ: cj, detailPanI: pi, detailPanJ: pj, detailRaw } = state;
-    const scale = state.coordScale;
+    const scale = state.coordScale || 1;
+    const res = state.nativeResolution || 90;
     const centerI = ci * 256 + pi, centerJ = cj * 256 + pj;
     const i1x = centerI - detailRaw.h / 2 + r;
     const j1x = centerJ - detailRaw.w / 2 + c;
     const mcX = Math.round(j1x * scale), mcZ = Math.round(i1x * scale);
     const tp = `/tp ${mcX} ~ ${mcZ}`;
     const elev = detailRaw.elev[r * detailRaw.w + c];
-    const mcY = Math.round(elev * state.coordScale / state.nativeResolution);
-    coordRows.innerHTML = `<div class="coord-xyz"><div class="coord-xy-row"><span class="coord-xy-lbl">${t('coord.x')}</span><span class="coord-xy-val">${mcX.toLocaleString()}</span></div><div class="coord-xy-row"><span class="coord-xy-lbl">${t('coord.y')}</span><span class="coord-xy-val">~${mcY}</span></div><div class="coord-xy-row"><span class="coord-xy-lbl">${t('coord.z')}</span><span class="coord-xy-val">${mcZ.toLocaleString()}</span></div><div class="coord-xy-row" style="margin-top:2px"><span class="coord-xy-lbl">${t('coord.elev')}</span><span class="coord-xy-val">${elev} m</span></div></div><div class="coord-tp" id="coord-tp-btn" title="${t('coord.copy_title')}">${tp}</div>`;
+    const mcY = metersToMcY(elev, scale, res);
+    coordRows.innerHTML = `<div class="coord-xyz"><div class="coord-xy-row"><span class="coord-xy-lbl">${t('coord.x')}</span><span class="coord-xy-val">${mcX.toLocaleString()}</span></div><div class="coord-xy-row"><span class="coord-xy-lbl">${t('coord.y')}</span><span class="coord-xy-val">${mcY.toLocaleString()}</span></div><div class="coord-xy-row"><span class="coord-xy-lbl">${t('coord.z')}</span><span class="coord-xy-val">${mcZ.toLocaleString()}</span></div><div class="coord-xy-row" style="margin-top:2px"><span class="coord-xy-lbl">${t('coord.elev')}</span><span class="coord-xy-val">${elev} m</span></div></div><div class="coord-tp" id="coord-tp-btn" title="${t('coord.copy_title')}">${tp}</div>`;
     const btn = document.getElementById('coord-tp-btn');
     btn.addEventListener('click', () => {
       navigator.clipboard.writeText(tp).then(() => {
@@ -586,6 +631,7 @@
     const { detailCI: ci, detailCJ: cj, detailPanI: pi, detailPanJ: pj, seed } = state;
     try {
       const r = await fetch(`/api/detail_raw?ci=${ci}&cj=${cj}&detail_size=${DETAIL_SIZE}&pan_i=${pi}&pan_j=${pj}&_s=${seed}`);
+      if (!r.ok) return;
       const h = parseInt(r.headers.get('X-Height'));
       const w = parseInt(r.headers.get('X-Width'));
       const hasTemp = r.headers.get('X-Has-Temp') === '1';
@@ -594,9 +640,11 @@
     } catch(_) {}
   }
 
+  let statsLoaded = false;
   coarseImg.onload = () => {
     coarseImg.classList.remove('loading'); coarseSpinner.classList.remove('active');
     updateCoarseInfo(); updateTileMarker(); loadCoarseData();
+    if (!statsLoaded) { statsLoaded = true; loadStats(); }  // load slider ranges only once
   };
   coarseImg.onerror = () => {
     coarseImg.classList.remove('loading'); coarseSpinner.classList.remove('active');
@@ -654,7 +702,7 @@
     if (row < 0 || row >= h || col < 0 || col >= w) return;
     const idx = row * w + col;
     const eVal = elev[idx];
-    const mcY = state.nativeResolution ? Math.round(eVal * state.coordScale / state.nativeResolution) : eVal;
+    const mcY = metersToMcY(eVal, state.coordScale || 1, state.nativeResolution || 90);
     let html = `<div class="ht-coord">${t('tooltip.px', row, col)}</div><div class="ht-row"><span class="ht-label">${t('tooltip.elev')}</span><span class="ht-val">${eVal} m</span></div><div class="ht-row"><span class="ht-label">${t('tooltip.mcy')}</span><span class="ht-val">~${mcY}</span></div>`;
     if (temp) html += `<div class="ht-row"><span class="ht-label">${t('tooltip.temp')}</span><span class="ht-val">${temp[idx].toFixed(2)}°</span></div>`;
     showTooltip(e, html);
@@ -747,12 +795,15 @@
     statusBar.firstChild.textContent = t('status.seed_set', d.seed);
   });
 
-  btnNewSeed.addEventListener('click', async () => {
-    const r = await fetch('/api/new_seed', { method: 'POST' });
+  // Quickly restore the current world seed (captured when the explorer loaded).
+  btnCurrentSeed.addEventListener('click', async () => {
+    if (!state.currentSeed) return;
+    seedInput.value = state.currentSeed;
+    const r = await fetch('/api/seed', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ seed: state.currentSeed }) });
     const d = await r.json();
-    state.seed = d.seed; seedDisplay.textContent = d.seed;
+    state.seed = d.seed; seedDisplay.textContent = d.seed; seedInput.value = '';
     resetDetail(); loadCoarse();
-    statusBar.firstChild.textContent = t('status.new_seed', d.seed);
+    statusBar.firstChild.textContent = t('status.seed_set', d.seed);
   });
 
   function resetDetail() {
@@ -765,9 +816,10 @@
 
   filterEnable.addEventListener('change', loadCoarse);
 
-  btnStats.addEventListener('click', async () => {
+  async function loadStats() {
     const { coarseOffsetI: oi, coarseOffsetJ: oj, coarseWindow: w } = state;
     const r = await fetch(`/api/coarse_stats?ci0=${oi-w}&ci1=${oi+w}&cj0=${oj-w}&cj1=${oj+w}`);
+    if (!r.ok) return;
     const data = await r.json();
     CHANNEL_META.forEach(({ ch, step }) => {
       if (!data[ch]) return;
@@ -781,7 +833,9 @@
     });
     const parts = Object.values(data).map(s => `${s.name}: [${s.min}, ${s.max}]`);
     statusBar.firstChild.textContent = t('status.stats', parts.join('  |  '));
-  });
+  }
+
+  btnStats.addEventListener('click', loadStats);
 
   document.getElementById('coarse-up').addEventListener('click',    () => { state.coarseOffsetI -= COARSE_PAN_STEP; loadCoarse(); });
   document.getElementById('coarse-down').addEventListener('click',  () => { state.coarseOffsetI += COARSE_PAN_STEP; loadCoarse(); });
@@ -819,11 +873,31 @@
     }
   });
 
+  async function loadSpawn() {
+    try {
+      const r = await fetch('/api/spawn');
+      const d = await r.json();
+      if (typeof d.x !== 'number') return;
+      const tp = `/tp ${d.x} ${d.y} ${d.z}`;
+      spawnDisplay.textContent = `${d.x}, ${d.y}, ${d.z}`;
+      spawnRow.style.display = 'flex';
+      btnCopySpawn.onclick = () => navigator.clipboard.writeText(tp).then(() => {
+        btnCopySpawn.textContent = '✓';
+        setTimeout(() => { btnCopySpawn.textContent = '⧉'; }, 1200);
+      });
+    } catch(_) {}
+  }
+
+  detailSizeSel.addEventListener('change', () => {
+    DETAIL_SIZE = parseInt(detailSizeSel.value, 10) || 512;
+    if (state.detailCI !== null) loadDetail();
+  });
+
   async function init() {
     try {
       const r = await fetch('/api/status');
       const d = await r.json();
-      state.seed = d.seed; state.channels = d.channels;
+      state.seed = d.seed; state.currentSeed = d.seed; state.channels = d.channels;
       state.nativeResolution = d.native_resolution ?? state.nativeResolution;
       state.coordScale = d.scale || 1;
       seedDisplay.textContent = d.seed;
@@ -832,6 +906,7 @@
       updateCoordScale(); updateCoarseZoomLabel();
       statusBar.firstChild.textContent = t('status.connected', d.seed, d.scale || 1);
       statusHint.textContent = t('hint.shortcuts');
+      loadSpawn();
       loadCoarse();
     } catch (_) {
       applyI18n();

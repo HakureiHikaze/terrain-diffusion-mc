@@ -295,6 +295,22 @@ public final class OnnxModel implements AutoCloseable {
         }
     }
 
+    /**
+     * Actionable hint for a CUDA provider load failure. The CUDA 12 runtime libraries
+     * (cudart etc.) are auto-downloaded by {@link CudaLibraryManager}, but {@code libcuda.so.1}
+     * ships only with the NVIDIA driver and cannot be fetched that way.
+     */
+    private static String cudaFailureHint(Throwable t) {
+        String msg = t.getMessage();
+        if (msg != null && msg.contains("libcuda.so.1")) {
+            return " The NVIDIA driver's libcuda.so.1 is missing on this host (it is not distributable " +
+                    "via the auto-downloaded CUDA 12 runtime libraries). If this host has an NVIDIA GPU, " +
+                    "install the driver (e.g. 'apt install nvidia-driver' / libnvidia-compute). " +
+                    "Otherwise use the CPU build (-PuseCpu=true), which has a much smaller jar.";
+        }
+        return " This is expected if you are not using a CUDA build.";
+    }
+
     private static void addCudaProvider(OrtSession.SessionOptions opts) throws OrtException {
         OrtCUDAProviderOptions cudaOpts = new OrtCUDAProviderOptions(0);
         // Only grow the BFC arena by exactly what is needed, never pre-allocate.
@@ -335,15 +351,14 @@ public final class OnnxModel implements AutoCloseable {
                     setResolvedProviderOnce("CUDA");
                 } catch (Throwable retryFailure) {
                     if (cudaWarnLoggedOnce.compareAndSet(false, true)) {
-                        LOG.warn("CUDA still unavailable after automatic library setup: {} - {}. " +
-                                        "This is expected if you are not using a CUDA build.",
-                                retryFailure.getClass().getSimpleName(), retryFailure.getMessage());
+                        LOG.warn("CUDA still unavailable after automatic library setup: {} - {}.{}",
+                                retryFailure.getClass().getSimpleName(), retryFailure.getMessage(), cudaFailureHint(retryFailure));
                     }
                 }
             }
             if (!added && cudaWarnLoggedOnce.compareAndSet(false, true)) {
-                LOG.warn("CUDA not available: {} - {}. This is expected if you are not using a CUDA build.",
-                        t.getClass().getSimpleName(), t.getMessage());
+                LOG.warn("CUDA not available: {} - {}.{}",
+                        t.getClass().getSimpleName(), t.getMessage(), cudaFailureHint(t));
             }
         }
 

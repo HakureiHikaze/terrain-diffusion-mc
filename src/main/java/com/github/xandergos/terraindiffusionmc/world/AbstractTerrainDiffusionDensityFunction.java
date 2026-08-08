@@ -16,9 +16,10 @@ import net.minecraft.world.level.levelgen.DensityFunction;
  * {@code TerrainDiffusionDensityFunction} subclass selected by the build.
  *
  * <p>When {@code caves} is enabled, the density combines the terrain step with a cheese-cave
- * noise band whose vertical range scales with the terrain height ({@code [targetHeight -
- * caveDepth, targetHeight]}). The deeper column below is always solid, so tall narrow peaks can
- * never be hollowed out into floating islands.
+ * band inside solid rock, vertically scaled with terrain height. Nothing at or below sea level
+ * is ever carved (water can never flood the terrain interior), the top of every column stays
+ * solid, and the band is mostly solid with occasional cheese voids — so it cannot hollow the
+ * surface into flat sea or floating islands.
  */
 public abstract class AbstractTerrainDiffusionDensityFunction implements DensityFunction {
     /** Lowest density this function can report (blocks below the target height). */
@@ -29,13 +30,21 @@ public abstract class AbstractTerrainDiffusionDensityFunction implements Density
     /** Whether to apply the height-scaled cheese-cave band on top of the terrain step. */
     protected final boolean caves;
 
-    // Cave band tuning: noise frequency matches the former JSON xz_scale 1.0 / y_scale 8.0.
+    // Cave band tuning. The original 4*noise^2-1.5 made the band ~95% hollow (void everywhere),
+    // so lowland interiors sat below sea level and flooded into "flat sea + void". Reworked:
+    // 1 - CAVE_STRENGTH*|noise| keeps the band mostly solid with occasional cheese voids, and
+    // nothing below sea level is ever carved (see density()).
     private static final float CAVE_FREQ = 0.01f;
     private static final float CAVE_Y_SCALE = 8.0f;
-    private static final float CAVE_MIN = 1.5f;
+    /** Cheese strength: 1 - K*|noise| goes void where |noise| > 1/K (~13% of the band). */
+    private static final float CAVE_STRENGTH = 7.0f;
     private static final int CAVE_MIN_DEPTH = 48;
     private static final int CAVE_MAX_DEPTH = 256;
     private static final int CAVE_FADE = 16;
+    /** Blocks of solid terrain kept between the surface and the cave band. */
+    private static final int CAVE_SURFACE_CAP = 8;
+    /** Sea level: nothing at or below this is ever carved, so water can never flood the interior. */
+    private static final int SEA_LEVEL = 63;
 
     private volatile long caveNoiseSeed = Long.MIN_VALUE;
     private volatile FastNoiseLite caveNoise;
@@ -76,9 +85,11 @@ public abstract class AbstractTerrainDiffusionDensityFunction implements Density
     }
 
     /**
-     * Density at a single block. Without caves this is a plain step at {@code targetHeight};
-     * with caves, the cheese cave band only reaches {@code caveDepth} blocks below the surface
-     * and everything deeper stays solid.
+     * Density at a single block. Without caves this is a plain step at {@code targetHeight}.
+     * With caves, a cheese-cave band sits in solid rock: at or below sea level nothing is ever
+     * carved (water can never flood the terrain interior), the top {@value #CAVE_SURFACE_CAP}
+     * blocks of every column stay solid, and the band (faded in from both the sea-level floor
+     * and the surface cap) is mostly solid with occasional voids where |noise| is large.
      */
     private double density(int x, int y, int z, int targetHeight) {
         if (y >= targetHeight) {
@@ -87,14 +98,23 @@ public abstract class AbstractTerrainDiffusionDensityFunction implements Density
         if (!caves) {
             return 1.0;
         }
-        int floorY = targetHeight - caveDepth(targetHeight);
-        if (y < floorY) {
+        if (y <= SEA_LEVEL) {
             return 1.0;
         }
-        float fade = Math.min(1.0f, (y - floorY) / (float) CAVE_FADE);
+        int caveTop = targetHeight - CAVE_SURFACE_CAP;
+        if (y >= caveTop) {
+            return 1.0;
+        }
+        int floorY = Math.max(SEA_LEVEL, targetHeight - caveDepth(targetHeight));
+        if (y <= floorY) {
+            return 1.0;
+        }
+        float bottomFade = Math.min(1.0f, (y - floorY) / (float) CAVE_FADE);
+        float topFade = Math.min(1.0f, (caveTop - y) / (float) CAVE_FADE);
+        float w = bottomFade * topFade;
         float n = caveNoise().GetNoise(x * CAVE_FREQ, y * CAVE_FREQ * CAVE_Y_SCALE, z * CAVE_FREQ);
-        double cave = 4.0 * n * n - CAVE_MIN;
-        return clampDensity(fade * cave + (1.0 - fade));
+        double cave = 1.0 - CAVE_STRENGTH * Math.abs(n);
+        return clampDensity(w * cave + (1.0 - w));
     }
 
     @Override

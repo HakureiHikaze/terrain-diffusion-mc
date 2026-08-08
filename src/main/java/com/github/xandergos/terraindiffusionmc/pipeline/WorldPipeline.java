@@ -1,5 +1,6 @@
 package com.github.xandergos.terraindiffusionmc.pipeline;
 
+import com.github.xandergos.terraindiffusionmc.config.TerrainDiffusionConfig;
 import com.github.xandergos.terraindiffusionmc.infinitetensor.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -170,17 +171,18 @@ public final class WorldPipeline implements AutoCloseable {
         }
 
         // Initial sample: (6, S, S) noise * sigma_max
-        EDMScheduler sched = new EDMScheduler(20);
+        int coarseSteps = TerrainDiffusionConfig.coarseSteps();
+        EDMScheduler sched = new EDMScheduler(coarseSteps);
         float[] sample = flatten3D(GaussianNoisePatch.generate(seed + 1, i1, j1, S, S, 6, S, S));
         for (int k = 0; k < sample.length; k++) sample[k] *= sched.sigmas[0];
 
-        // 20-step DPM-Solver++
+        // Coarse DPM-Solver++ (steps from pipeline.coarse_steps)
         float[][] condInputs = new float[5][1];
         long[][] condShapes  = new long[5][1];
         for (int ci = 0; ci < 5; ci++) { condInputs[ci] = new float[]{COND_VALS[ci]}; condShapes[ci] = new long[]{1}; }
 
-        LOG.debug("Coarse model called for chunk ({}, {}) tile pixels [{}, {}]-[{}, {}] (20 steps)", i, j, i1, j1, i1 + S, j1 + S);
-        for (int step = 0; step < 20; step++) {
+        LOG.debug("Coarse model called for chunk ({}, {}) tile pixels [{}, {}]-[{}, {}] ({} steps)", i, j, i1, j1, i1 + S, j1 + S, coarseSteps);
+        for (int step = 0; step < coarseSteps; step++) {
             float sigma  = sched.sigmas[step];
             float cnoise = EDMScheduler.trigflowPreconditionNoise(sigma);
             float[] scaledIn = EDMScheduler.preconditionInputs(sample, sigma);

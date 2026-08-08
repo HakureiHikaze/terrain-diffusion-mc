@@ -121,7 +121,22 @@ public final class TerrainDiffusionConfig {
         return configuredTileSize;
     }
 
-    /** Whether to carve winding river channels into the terrain (integration-layer overlay). */
+    /**
+     * DPM-Solver++ step count for the coarse elevation stage (the dominant cost of worldgen).
+     * Fewer steps generate faster at a slight fidelity cost; DPM-Solver++ 2nd order stays
+     * high quality down to ~12 steps. Clamped to [8, 32]. Default 20 matches the reference
+     * pipeline; lower it (e.g. 12-16) only if you accept the fidelity tradeoff.
+     */
+    public static int coarseSteps() {
+        int steps = readInt("pipeline.coarse_steps", 20);
+        return Math.max(8, Math.min(32, steps));
+    }
+
+    /**
+     * Whether to carve river channels into the terrain. Default ON: winding channels are carved
+     * into lowland, dipping just below sea level so they hold water. Tune {@code rivers.flow_threshold}
+     * (raise it for fewer, larger rivers) and {@code rivers.depth} to control how much land they claim.
+     */
     public static boolean riversEnabled() {
         return readBoolean("rivers.enabled", true);
     }

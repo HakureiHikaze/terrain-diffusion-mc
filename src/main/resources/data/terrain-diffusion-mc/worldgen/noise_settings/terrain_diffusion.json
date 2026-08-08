@@ -35,7 +35,7 @@
     },
     "final_density": {
       "type": "terrain-diffusion-mc:terrain_diffusion",
-      "caves": true
+      "caves": false
     },
     "vein_toggle": {
       "type": "minecraft:interpolated",

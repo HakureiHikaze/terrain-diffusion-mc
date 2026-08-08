@@ -74,12 +74,37 @@ fabricApi {
 }
 
 repositories {
-    // Add repositories to retrieve artifacts from in here.
-    // You should only use this when depending on other mods because
-    // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-    // See https://docs.gradle.org/current/userguide/declaring_repositories.html
-    // for more information about repositories.
-    flatDir { dirs 'libs'}
+    // Domestic mirrors for faster downloads (China)
+    maven { url 'https://maven.aliyun.com/repository/public' }
+    maven { url 'https://maven.aliyun.com/repository/central' }
+    maven { url 'https://mirrors.huaweicloud.com/repository/maven/' }
+    
+    // Local libs folder for manually placed JARs
+    flatDir { dirs 'libs', layout.buildDirectory.dir('stripped-ort').get().asFile }
+    
+    // Essential repositories for Loom (Minecraft, Fabric, etc.)
+    //    Note: Loom adds some of these automatically, but it's safe to declare them explicitly.
+    mavenCentral()
+    maven { url 'https://maven.fabricmc.net/' }
+}
+
+// Repackages onnxruntime_gpu without the win-x64 natives (CUDA variant targets Linux servers;
+// Windows users get the DML variant). Served via the flatDir repo above so Loom's include
+// accepts it; bundled jar shrinks from 720 MB to ~400 MB. CUDA-only: no-op for other variants.
+def stripOrtGpuJar = tasks.register('stripOrtGpuJar', Zip) {
+    archiveFileName = 'onnxruntime_gpu-1.28.0-linux.jar'
+    destinationDirectory = layout.buildDirectory.dir('stripped-ort')
+    from({
+        def gpuJar = configurations.runtimeClasspath.find { it.name.startsWith('onnxruntime_gpu') }
+        if (gpuJar != null) {
+            zipTree(gpuJar)
+        }
+    })
+    exclude 'ai/onnxruntime/native/win-x64/**'
+}
+
+if (useCuda) {
+    tasks.named('processIncludeJars') { dependsOn stripOrtGpuJar }
 }
 
 dependencies {
@@ -93,7 +118,8 @@ dependencies {
     if (useCuda) {
         // Java GPU package always links CUDA 12 libs (see CudaLibraryManager), so one version serves all.
         implementation "com.microsoft.onnxruntime:onnxruntime_gpu:1.28.0"
-        include "com.microsoft.onnxruntime:onnxruntime_gpu:1.28.0"
+        // Resolved from the flatDir build/stripped-ort repo (win-x64 natives stripped).
+        include "com.microsoft.onnxruntime:onnxruntime_gpu:1.28.0-linux"
     } else if (useCpu) {
         implementation "com.microsoft.onnxruntime:onnxruntime:1.28.0"
         include "com.microsoft.onnxruntime:onnxruntime:1.28.0"
