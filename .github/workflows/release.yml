@@ -41,6 +41,8 @@ jobs:
           fi
 
       - name: Build jar
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: ./gradlew build ${{ matrix.profile.flags }} -PmcTarget=${{ matrix.mcTarget }}
 
       - name: Upload jar
@@ -65,3 +67,62 @@ jobs:
         with:
           files: jars/**/*.jar
           generate_release_notes: true
+
+  modrinth:
+    name: Publish to Modrinth
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download jars
+        uses: actions/download-artifact@v8
+        with:
+          path: jars
+
+      - name: Publish to Modrinth
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+          MODRINTH_PROJECT_ID: ${{ secrets.MODRINTH_PROJECT_ID }}
+        run: |
+          # secrets may not be referenced from an `if:` condition, so guard here.
+          if [ -z "$MODRINTH_TOKEN" ] || [ -z "$MODRINTH_PROJECT_ID" ]; then
+            echo "::warning::Modrinth secrets not configured - skipping publish"
+            exit 0
+          fi
+          set -euo pipefail
+          MOD_VER=$(sed -n 's/^mod_version=//p' gradle.properties)
+          case "$MOD_VER" in
+            *-beta)  TYPE=beta ;;
+            *-alpha) TYPE=alpha ;;
+            *)       TYPE=release ;;
+          esac
+          mapfile -t JARS < <(find jars -name '*.jar' -type f | sort)
+          echo "Publishing ${#JARS[@]} jars for ${MOD_VER} (${TYPE})"
+          PARTS=(); CURL_ARGS=(); PRIMARY=""
+          i=0
+          for j in "${JARS[@]}"; do
+            PARTS+=("\"f$i\"")
+            CURL_ARGS+=(-F "f$i=@$j")
+            if [[ "$j" == *windows* ]]; then PRIMARY="f$i"; fi
+            i=$((i+1))
+          done
+          [ -n "$PRIMARY" ] || PRIMARY="f0"
+          FILE_PARTS=$(IFS=,; echo "[${PARTS[*]}]")
+          DATA=$(jq -cn \
+            --arg name "Terrain Diffusion Next $MOD_VER" \
+            --arg ver "$MOD_VER" \
+            --arg type "$TYPE" \
+            --arg pid "$MODRINTH_PROJECT_ID" \
+            --arg primary "$PRIMARY" \
+            --argjson gv '["26.1.2","26.2"]' \
+            --argjson loaders '["fabric"]' \
+            --argjson fparts "$FILE_PARTS" \
+            '{name:$name, version_number:$ver, changelog:"", dependencies:[],
+              game_versions:$gv, version_type:$type, loaders:$loaders,
+              featured:false, project_id:$pid, file_parts:$fparts, primary_file:$primary}')
+          curl -sS -f -X POST "https://api.modrinth.com/v2/version" \
+            -H "Authorization: Bearer $MODRINTH_TOKEN" \
+            -F "data=$DATA" \
+            "${CURL_ARGS[@]}"
