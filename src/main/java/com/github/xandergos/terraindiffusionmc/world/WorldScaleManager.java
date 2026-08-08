@@ -60,6 +60,8 @@ public final class WorldScaleManager {
         }
 
         currentScale = clampScale(worldScaleSettingsState.getScale());
+        LOG.info("World scale for '{}' loaded: {} (explicit={})",
+                serverLevel.dimension().location(), currentScale, worldScaleSettingsState.hasExplicitScale());
     }
 
     /**
