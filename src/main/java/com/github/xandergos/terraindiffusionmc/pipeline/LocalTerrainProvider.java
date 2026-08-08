@@ -333,7 +333,10 @@ public final class LocalTerrainProvider {
 
         float[] elevOut = addElevationNoise(elevSmooth, elevPadded, i1, j1, H, W, pixelSizeM);
 
-        short[] biomeFlat = BiomeClassifier.classify(elevSmooth, climate, i1, j1, elevPadded, H, W, pixelSizeM);
+        // Classify from the detail-enhanced elevation so terrain height and
+        // biome bands stay consistent at scale > 1 (scale 1 uses raw pipeline
+        // elevation for both).
+        short[] biomeFlat = BiomeClassifier.classify(elevOut, climate, i1, j1, elevPadded, H, W, pixelSizeM);
         return buildHeightmapData(elevOut, biomeFlat, H, W);
     }
 

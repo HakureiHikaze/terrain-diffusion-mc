@@ -33,7 +33,10 @@
 > Known deviations from the 1.21.11 release: density function is float-based
 > (`range()`/`domainAxes()`), spawn is delegated through
 > `ChunkGenerator.getOrigin`, biome search uses coarse classification, and
-> dimension types declare `default_clock` for sleep/time support.
+> dimension types declare `default_clock` for sleep/time support. For scale > 1,
+> the upsampled terrain gets slope-dependent detail noise and biomes are
+> classified from that detail-enhanced elevation (scale 1 uses raw pipeline
+> elevation for both).
 
 
 #### UPDATE: The research behind this mod has been accepted to SIGGRAPH 2026, the world's premier graphics conference! That means the research was officially peer reviewed and recognized as a significant contribution to the field. Enjoy the mod!
