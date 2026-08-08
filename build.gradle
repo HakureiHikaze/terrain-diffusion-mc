@@ -74,14 +74,26 @@ fabricApi {
 }
 
 repositories {
-    // Domestic mirrors for faster downloads (China)
-    maven { url 'https://maven.aliyun.com/repository/public' }
-    maven { url 'https://maven.aliyun.com/repository/central' }
-    maven { url 'https://mirrors.huaweicloud.com/repository/maven/' }
-    
-    // Local libs folder for manually placed JARs
+    // Local libs first: onnxruntime-dml:1.0 (libs/) and the stripped CUDA jar
+    // (build/stripped-ort) exist ONLY here, so resolve them before any remote repo.
     flatDir { dirs 'libs', layout.buildDirectory.dir('stripped-ort').get().asFile }
-    
+
+    // Domestic mirrors for faster downloads (China). Exclude com.microsoft.onnxruntime:
+    // the DML jar lives only in libs/ and the CUDA jar only in build/stripped-ort, so a
+    // flaky mirror (e.g. 502) must not be able to fail resolution of a local artifact.
+    maven {
+        url 'https://maven.aliyun.com/repository/public'
+        content { excludeGroup 'com.microsoft.onnxruntime' }
+    }
+    maven {
+        url 'https://maven.aliyun.com/repository/central'
+        content { excludeGroup 'com.microsoft.onnxruntime' }
+    }
+    maven {
+        url 'https://mirrors.huaweicloud.com/repository/maven/'
+        content { excludeGroup 'com.microsoft.onnxruntime' }
+    }
+
     // Essential repositories for Loom (Minecraft, Fabric, etc.)
     //    Note: Loom adds some of these automatically, but it's safe to declare them explicitly.
     mavenCentral()
@@ -222,16 +234,39 @@ task pipelineTest(type: JavaExec, dependsOn: compileJava) {
     jvmArgs '-Xmx8g'
 }
 
+def committedManifestFile = rootProject.file('model-assets-manifest.json')
+
 tasks.register('generateModelAssetManifest') {
     inputs.property('modelRepositorySlug', modelRepositorySlug)
     inputs.property('modelRepositoryRevision', modelRepositoryRevision)
+    if (committedManifestFile.exists()) {
+        inputs.file(committedManifestFile)
+    }
     outputs.file(generatedManifestFile)
 
     doLast {
         generatedManifestDirectory.mkdirs()
 
+        // Prefer the committed manifest (builds offline, immune to HF rate limits).
+        // Only fall back to a live HF API query when it is missing.
+        if (committedManifestFile.exists()) {
+            Map committed = new JsonSlurper().parse(committedManifestFile) as Map
+            if (committed.revision == modelRepositoryRevision) {
+                generatedManifestFile.text = committedManifestFile.text
+                return
+            }
+        }
+
         String apiUrl = "https://huggingface.co/api/models/${modelRepositorySlug}/revision/${modelRepositoryRevision}?blobs=true"
-        Map modelInfo = new JsonSlurper().parseText(new URL(apiUrl).getText('UTF-8')) as Map
+        HttpURLConnection conn = (HttpURLConnection) new URL(apiUrl).openConnection()
+        conn.setRequestMethod('GET')
+        conn.setConnectTimeout(15_000)
+        conn.setReadTimeout(30_000)
+        String hfToken = System.getenv('HF_TOKEN')
+        if (hfToken != null && !hfToken.isBlank()) {
+            conn.setRequestProperty('Authorization', "Bearer ${hfToken}")
+        }
+        Map modelInfo = new JsonSlurper().parseText(conn.inputStream.getText('UTF-8')) as Map
         List siblings = modelInfo.siblings as List
 
         List<String> requiredFiles = [
