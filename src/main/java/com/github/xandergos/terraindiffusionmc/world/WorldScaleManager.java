@@ -2,6 +2,7 @@ package com.github.xandergos.terraindiffusionmc.world;
 
 import com.github.xandergos.terraindiffusionmc.config.TerrainDiffusionConfig;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.SavedDataStorage;
 import org.slf4j.Logger;
@@ -33,9 +34,16 @@ public final class WorldScaleManager {
      */
     public static void initializeForWorld(ServerLevel serverLevel) {
         SavedDataStorage savedDataStorage = serverLevel.getChunkSource().getDataStorage();
+        // ServerChunkCache stores per-dimension saved data under
+        // <world>/dimensions/<namespace>/<path>/data (DimensionType.getStorageFolder),
+        // not the server-level <world>/data folder.
+        Path dimensionDataFolder = DimensionType.getStorageFolder(
+                        serverLevel.dimension(),
+                        serverLevel.getServer().getWorldPath(LevelResource.ROOT))
+                .resolve("data");
         Path settingsFile = WorldScaleSettingsState.TYPE.id()
                 .withSuffix(".dat")
-                .resolveAgainst(serverLevel.getServer().getWorldPath(LevelResource.DATA));
+                .resolveAgainst(dimensionDataFolder);
         boolean settingsFileExists = Files.exists(settingsFile);
 
         WorldScaleSettingsState worldScaleSettingsState = savedDataStorage.computeIfAbsent(WorldScaleSettingsState.TYPE);
