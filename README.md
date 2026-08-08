@@ -133,7 +133,7 @@ assumed to be 10000 m (`maxGeneratedY = sea_level + ⌊10000·scale/30⌋`); the
 generated elevation is ~-10000 m, which the non-linear depth compression maps to
 `sea_level - 97` regardless of scale. All heights below are relative to `sea_level`:
 
-| Scale | Meters/block | Highest Y (rel. sea level) | Lowest Y (rel. sea level) | Total height (blocks) | Fits default ±2032 limit? |
+| Scale | Meters/block | Highest Y (rel. sea level) | Lowest Y (rel. sea level) | Total height (blocks) | Fits ±2032 datapack (sea=-1904)? |
 |---:|---:|---:|---:|---:|---|
 | 1 | 30 | +333 | -97 | 431 | ✔ (needs ≥ 432) |
 | 2 | 15 | +666 | -97 | 764 | ✔ |
@@ -151,6 +151,12 @@ generated elevation is ~-10000 m, which the non-linear depth compression maps to
 | 14 | 2.14 | +4666 | -97 | 4764 | ✖ |
 | 15 | 2 | +5000 | -97 | 5098 | ✖ |
 
+> **Bundled dimension** — the mod's own `terrain_diffusion` dimension uses
+> `min_y=-64, height=800` (top Y 735). With the default `sea_level=63`, scales
+> 1-2 fit entirely; scale 3+ is truncated unless an extended-height datapack
+> is used. The mod clamps the selected scale to the actual dimension height:
+> `maxScale = floor((topY − sea_level) · 30 / 10000)`.
+>
 > **World height limits** — Minecraft 26.3 supports `Y_SIZE = 4064` (min_y=-2032,
 > max_y=2031) via a datapack. Scales 1-11 fit entirely inside it; scales 12-15
 > exceed it and the tallest mountains get truncated (see the "truncation is
