@@ -288,7 +288,13 @@ public final class OnnxModel implements AutoCloseable {
         }
         synchronized (ACCELERATOR_SLOT_LOCK) {
             claimAcceleratorSlot();
-            return runWithSession(activeAcceleratorSession, inputs);
+            if (activeAcceleratorSession != null) {
+                return runWithSession(activeAcceleratorSession, inputs);
+            }
+            if (cpuSession != null) {
+                return runWithSession(cpuSession, inputs);
+            }
+            throw new IllegalStateException("No inference session available for " + name);
         }
     }
 
