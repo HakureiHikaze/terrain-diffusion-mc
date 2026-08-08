@@ -182,13 +182,15 @@ Terrain Diffusion's models take up about 2.5GB of RAM, so make sure to allocate 
 
 An internet connection is required during the build to fetch the pinned model manifest metadata from Hugging Face.
 
-Use Java 21 to run Gradle. Java 25 currently fails before configuration with `Unsupported class file major version 69`; this project intentionally does not upgrade Gradle/Loom as part of platform support. On Fish, select a Java 21 installation for one command:
+This branch (**26.3-fabric**) requires **Java 25** to build. On Fish, select a Java 25 installation for one command:
 
 ```fish
-env JAVA_HOME=/usr/lib/jvm/java-21-openjdk PATH=/usr/lib/jvm/java-21-openjdk/bin:$PATH ./gradlew --no-daemon clean build
+env JAVA_HOME=/usr/lib/jvm/java-25-openjdk PATH=/usr/lib/jvm/java-25-openjdk/bin:$PATH ./gradlew --no-daemon clean build
 ```
 
 Adjust the Java path for your distribution. Confirm it with `java -version` after exporting the same `JAVA_HOME` and `PATH`.
+
+> The upstream Java 21 note applies to `master` / `1.21.x` releases only.
 
 The `-windows` build requires `libs/onnxruntime-dml.jar`, which is provided as part of the repo. See [Building onnxruntime with DirectML](#building-onnxruntime-with-directml) to build from source. 
 
