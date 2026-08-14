@@ -24,6 +24,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * <p>When scale=1 the pipeline is sampled at native model resolution directly.
  * When scale>1 the pipeline is sampled at native resolution and the result is
  * bilinearly upsampled, giving 1 block = nativeResolution/scale.
+ * Post-processors (shaping, detail noise, wonders, rivers, biomes) are anchored
+ * to model-native pixel coordinates so the same physical location is consistent
+ * at every world scale.
  */
 public final class LocalTerrainProvider {
     private static final Logger LOG = LoggerFactory.getLogger(LocalTerrainProvider.class);
@@ -31,20 +34,6 @@ public final class LocalTerrainProvider {
     private static final float NATIVE_RESOLUTION = WorldPipelineModelConfig.nativeResolution();
     /** Halo (native pixels) around a tile for D8 river routing so paths are seamless across tiles. */
     private static final int HYBRID_HALO_PIXELS = 64;
-
-    private static final FastNoiseLite ELEV_NOISE_COARSE = makeFnl(99999, 1f/24f, 3, 2f, 0.5f);
-    private static final FastNoiseLite ELEV_NOISE_FINE   = makeFnl(88888, 1f/6f,  2, 2f, 0.6f);
-
-    private static FastNoiseLite makeFnl(int seed, float freq, int oct, float lac, float gain) {
-        FastNoiseLite fnl = new FastNoiseLite(seed);
-        fnl.SetNoiseType(FastNoiseLite.NoiseType.Perlin);
-        fnl.SetFrequency(freq);
-        fnl.SetFractalType(FastNoiseLite.FractalType.FBm);
-        fnl.SetFractalOctaves(oct);
-        fnl.SetFractalLacunarity(lac);
-        fnl.SetFractalGain(gain);
-        return fnl;
-    }
 
     public static final class HeightmapData {
         public final short[][] heightmap;
@@ -144,17 +133,23 @@ public final class LocalTerrainProvider {
                 float[] elev = data[0];
                 float[] climate = (withClimate && data.length > 1) ? data[1] : null;
 
-                TerrainShaping.apply(elev, i1, j1, H, W, NATIVE_RESOLUTION);
+                // Native-resolution explorer path: block coordinates are native pixels.
+                float nativePerBlock = 1f;
+                TerrainShaping.apply(elev, i1, j1, H, W, nativePerBlock);
 
+                // Detail noise needs the same (H+2)x(W+2) padded elevation used by the
+                // biome classifier, so build it unconditionally in this path.
+                float[] elevPadded = padElevation(elev, H, W);
+                float[] elevOut = ElevationDetailNoise.apply(
+                        elev, elevPadded, i1, j1, H, W, nativePerBlock);
                 if (climate != null) {
-                    // BiomeClassifier needs a (H+2)x(W+2) padded elevation for its coastal
-                    // neighbourhood check; build it by edge-clamping the fetched region.
-                    float[] elevPadded = padElevation(elev, H, W);
                     short[] gating = BiomeClassifier.classify(elev, climate, i1, j1, elevPadded, H, W, NATIVE_RESOLUTION);
-                    WonderGenerator.apply(elev, gating, i1, j1, H, W, NATIVE_RESOLUTION, getSeed());
+                    WonderGenerator.apply(elevOut, gating, i1, j1, H, W,
+                            NATIVE_RESOLUTION, nativePerBlock, getSeed());
                 }
 
-                carveRivers(elev, i1, j1, H, W, NATIVE_RESOLUTION);
+                carveRivers(elevOut, i1, j1, H, W, NATIVE_RESOLUTION);
+                data[0] = elevOut;
             }
             return data;
         });
@@ -231,7 +226,7 @@ public final class LocalTerrainProvider {
         return RiverCarver.carveAlongMask(elevOut, pathsOut, outH, outW,
                 TerrainDiffusionConfig.riverDepth(),
                 TerrainDiffusionConfig.riverMaxAltitude(),
-                TerrainDiffusionConfig.riverCarveWidth());
+                TerrainDiffusionConfig.riverCarveWidth(), scale);
     }
 
     /**
@@ -344,21 +339,25 @@ public final class LocalTerrainProvider {
 
     private HeightmapData handle1x(int i1, int j1, int i2, int j2) {
         int H = i2 - i1, W = j2 - j1;
+        float nativePerBlock = 1f;
 
         float[] elevPadded = pipeline.get(i1 - 1, j1 - 1, i2 + 1, j2 + 1, false)[0];
         float[][] out = pipeline.get(i1, j1, i2, j2, true);
         float[] elevFlat = out[0];
         float[] climate  = out[1];
 
-        TerrainShaping.apply(elevFlat, i1, j1, H, W, NATIVE_RESOLUTION);
-        TerrainShaping.apply(elevPadded, i1 - 1, j1 - 1, H + 2, W + 2, NATIVE_RESOLUTION);
+        TerrainShaping.apply(elevFlat, i1, j1, H, W, nativePerBlock);
+        TerrainShaping.apply(elevPadded, i1 - 1, j1 - 1, H + 2, W + 2, nativePerBlock);
 
+        float[] elevOut = ElevationDetailNoise.apply(
+                elevFlat, elevPadded, i1, j1, H, W, nativePerBlock);
         short[] biomeGating = BiomeClassifier.classify(elevFlat, climate, i1, j1, elevPadded, H, W, NATIVE_RESOLUTION);
-        WonderGenerator.apply(elevFlat, biomeGating, i1, j1, H, W, NATIVE_RESOLUTION, getSeed());
+        WonderGenerator.apply(elevOut, biomeGating, i1, j1, H, W,
+                NATIVE_RESOLUTION, nativePerBlock, getSeed());
 
-        boolean[] riverMask = carveRivers(elevFlat, i1, j1, H, W, NATIVE_RESOLUTION);
-        short[] biomeFlat = BiomeClassifier.classify(elevFlat, climate, i1, j1, elevPadded, H, W, NATIVE_RESOLUTION, riverMask);
-        return buildHeightmapData(elevFlat, biomeFlat, H, W);
+        boolean[] riverMask = carveRivers(elevOut, i1, j1, H, W, NATIVE_RESOLUTION);
+        short[] biomeFlat = BiomeClassifier.classify(elevOut, climate, i1, j1, elevPadded, H, W, NATIVE_RESOLUTION, riverMask);
+        return buildHeightmapData(elevOut, biomeFlat, H, W);
     }
 
     // =========================================================================
@@ -368,6 +367,7 @@ public final class LocalTerrainProvider {
     private HeightmapData handleUpsampled(int i1, int j1, int i2, int j2, int scale) {
         int H = i2 - i1, W = j2 - j1;
         float pixelSizeM = NATIVE_RESOLUTION / scale;
+        float nativePerBlock = pixelSizeM / NATIVE_RESOLUTION;
 
         // Convert block coords to native pixel coords
         int i1n = Math.floorDiv(i1, scale);
@@ -401,13 +401,15 @@ public final class LocalTerrainProvider {
         // Upsample climate (4, nH, nW) → (4, H, W)
         float[] climate = upsampleClimate(climateNativeFlat, nH, nW, cropI1, cropJ1, H, W, scale, nH * scale, nW * scale);
 
-        TerrainShaping.apply(elevSmooth, i1, j1, H, W, pixelSizeM);
-        TerrainShaping.apply(elevPadded, i1 - 1, j1 - 1, H + 2, W + 2, pixelSizeM);
+        TerrainShaping.apply(elevSmooth, i1, j1, H, W, nativePerBlock);
+        TerrainShaping.apply(elevPadded, i1 - 1, j1 - 1, H + 2, W + 2, nativePerBlock);
 
-        float[] elevOut = addElevationNoise(elevSmooth, elevPadded, i1, j1, H, W, pixelSizeM);
+        float[] elevOut = ElevationDetailNoise.apply(
+                elevSmooth, elevPadded, i1, j1, H, W, nativePerBlock);
 
         short[] biomeGating = BiomeClassifier.classify(elevSmooth, climate, i1, j1, elevPadded, H, W, pixelSizeM);
-        WonderGenerator.apply(elevOut, biomeGating, i1, j1, H, W, pixelSizeM, getSeed());
+        WonderGenerator.apply(elevOut, biomeGating, i1, j1, H, W,
+                pixelSizeM, nativePerBlock, getSeed());
 
         boolean[] riverMask = null;
         if (TerrainDiffusionConfig.riversEnabled()) {
@@ -433,52 +435,6 @@ public final class LocalTerrainProvider {
     // =========================================================================
     // Helpers
     // =========================================================================
-
-    private float[] addElevationNoise(float[] elevSmooth, float[] elevPadded,
-                                       int i1, int j1, int H, int W, float pixelSizeM) {
-        float[] slopeGradient = sobelGradient(elevPadded, H + 2, W + 2, H, W);
-        float[] elevOut = elevSmooth.clone();
-        float normFactor = 40f * pixelSizeM / NATIVE_RESOLUTION;
-        float ampC = 100f * pixelSizeM / NATIVE_RESOLUTION;
-        float ampF = 70f  * pixelSizeM / NATIVE_RESOLUTION;
-
-        for (int r = 0; r < H; r++) {
-            for (int c = 0; c < W; c++) {
-                int idx = r * W + c;
-                float e = elevSmooth[idx];
-                if (e < 0f) continue;
-
-                float grad = slopeGradient[idx];
-                float sf = Math.min(1f, grad / normFactor);
-                sf = sf * sf * (float) Math.sqrt(sf);
-
-                float nx = j1 + c, ny = i1 + r;
-                elevOut[idx] = e
-                        + ELEV_NOISE_COARSE.GetNoise(nx, ny) * ampC * sf
-                        + ELEV_NOISE_FINE.GetNoise(nx, ny)   * ampF * sf;
-            }
-        }
-        return elevOut;
-    }
-
-    private static float[] sobelGradient(float[] padded, int pH, int pW, int H, int W) {
-        final float[] SOBEL_X = {-1,0,1, -2,0,2, -1,0,1};
-        final float[] SOBEL_Y = {-1,-2,-1, 0,0,0, 1,2,1};
-        float[] result = new float[H * W];
-        for (int r = 0; r < H; r++) {
-            for (int c = 0; c < W; c++) {
-                float dx = 0, dy = 0;
-                for (int k = 0; k < 9; k++) {
-                    float v = padded[(r + k/3) * pW + (c + k%3)];
-                    dx += v * SOBEL_X[k];
-                    dy += v * SOBEL_Y[k];
-                }
-                dx /= 8f; dy /= 8f;
-                result[r * W + c] = (float) Math.sqrt(dx * dx + dy * dy);
-            }
-        }
-        return result;
-    }
 
     private static float[] upsampleClimate(float[] climNative, int nH, int nW,
                                             int cropI1, int cropJ1, int H, int W,

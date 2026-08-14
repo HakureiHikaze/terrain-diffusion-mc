@@ -19,6 +19,9 @@ public final class TerrainDiffusionConfig {
     private static final boolean DEFAULT_VALIDATE_MODEL = true;
     private static final int DEFAULT_EXPLORER_PORT = 19801;
     private static final int DEFAULT_TILE_SIZE = 256;
+    public static final int DEFAULT_WORLD_SCALE = 2;
+    public static final int MIN_WORLD_SCALE = 1;
+    public static final int MAX_WORLD_SCALE = 6;
 
     static {
         loadDefaults();
@@ -122,6 +125,15 @@ public final class TerrainDiffusionConfig {
     }
 
     /**
+     * Default world scale applied when a world has no explicit per-world scale yet.
+     * Supported range is 1-6; higher values mean more blocks per native terrain pixel.
+     */
+    public static int worldScale() {
+        return Math.max(MIN_WORLD_SCALE,
+                Math.min(MAX_WORLD_SCALE, readInt("world.scale", DEFAULT_WORLD_SCALE)));
+    }
+
+    /**
      * DPM-Solver++ step count for the coarse elevation stage (the dominant cost of worldgen).
      * Fewer steps generate faster at a slight fidelity cost; DPM-Solver++ 2nd order stays
      * high quality down to ~12 steps. Clamped to [8, 32]. Default 20 matches the reference
@@ -214,6 +226,11 @@ public final class TerrainDiffusionConfig {
     // =========================================================================
     // Terrain shaping
     // =========================================================================
+
+    /** Whether to apply slope-weighted elevation detail noise after upsampling. */
+    public static boolean detailNoiseEnabled() {
+        return readBoolean("terrain.detail_noise.enabled", true);
+    }
 
     /** Whether to apply folded-ridge noise (abs(noise)) for mountain skeleton. */
     public static boolean ridgesEnabled() {

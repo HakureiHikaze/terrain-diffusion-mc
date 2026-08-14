@@ -52,7 +52,7 @@ class TerrainShapingTest {
         for (int i = 0; i < H * W / 2; i++) elev[i] = -10f;
         for (int i = H * W / 2; i < H * W; i++) elev[i] = 100f;
         float[] copy = elev.clone();
-        TerrainShaping.applyRidges(elev, 0, 0, H, W, 90f);
+        TerrainShaping.applyRidges(elev, 0, 0, H, W, 1f);
         for (int i = 0; i < H * W / 2; i++)
             assertEquals(copy[i], elev[i], 0.0001f, "ocean should be unchanged at " + i);
     }
@@ -62,10 +62,29 @@ class TerrainShapingTest {
         int H = 5, W = 5;
         float[] elev = new float[H * W];
         for (int i = 0; i < H * W; i++) elev[i] = 500f;
-        TerrainShaping.applyRidges(elev, 0, 0, H, W, 90f);
+        TerrainShaping.applyRidges(elev, 0, 0, H, W, 1f);
         boolean anyRaised = false;
         for (int i = 0; i < H * W; i++)
             if (elev[i] > 500f) { anyRaised = true; break; }
         assertTrue(anyRaised);
+    }
+
+    @Test
+    void ridgeDeltaIsScaleInvariant() {
+        // Scale=1 at native pixel (3, 5); scale=2 at block (6, 10) maps to the same pixel.
+        float[] scale1 = {500f};
+        float[] scale2 = {500f};
+        TerrainShaping.applyRidges(scale1, 3, 5, 1, 1, 1f);
+        TerrainShaping.applyRidges(scale2, 6, 10, 1, 1, 0.5f);
+        assertEquals(scale1[0], scale2[0], 1e-4f, "ridge delta must match across scales");
+    }
+
+    @Test
+    void plateauDeltaIsScaleInvariant() {
+        float[] scale1 = {900f};
+        float[] scale2 = {900f};
+        TerrainShaping.applyPlateaus(scale1, 3, 5, 1, 1, 1f);
+        TerrainShaping.applyPlateaus(scale2, 6, 10, 1, 1, 0.5f);
+        assertEquals(scale1[0], scale2[0], 1e-4f, "plateau delta must match across scales");
     }
 }

@@ -96,8 +96,9 @@ public final class RiverCarver {
      * paths from {@link RiverDetector}). The mask centre-line is cut down to the
      * channel floor (below sea level so the world's sea fluid fills it); each
      * additional {@code bankSmoothingRounds} dilates the channel by one ring with a
-     * progressively shallower cut for smooth tapered banks. Channels are only cut
-     * into land above sea level and below {@code maxAltitudeMeters}.
+     * progressively shallower cut for smooth tapered banks. Each ring is {@code scale}
+     * output pixels wide so the physical bank width stays constant across world scales.
+     * Channels are only cut into land above sea level and below {@code maxAltitudeMeters}.
      *
      * @param elev                elevation in metres, row-major {@code (H, W)}; mutated in place
      * @param riverMask           per-pixel river path mask, length H*W
@@ -106,10 +107,12 @@ public final class RiverCarver {
      * @param depthMeters         how far below sea level a channel centre is cut
      * @param maxAltitudeMeters   channels are not cut into terrain above this elevation
      * @param bankSmoothingRounds how many dilation rings to add for tapered banks (0 = centre-line only)
+     * @param scale               blocks per native pixel (physical width of one dilation ring)
      * @return wet mask, {@code true} where a block was carved to below sea level
      */
     public static boolean[] carveAlongMask(float[] elev, boolean[] riverMask, int H, int W,
-                                           float depthMeters, float maxAltitudeMeters, int bankSmoothingRounds) {
+                                           float depthMeters, float maxAltitudeMeters,
+                                           int bankSmoothingRounds, int scale) {
         boolean[] wet = new boolean[H * W];
         if (elev == null || riverMask == null || depthMeters <= 0f) {
             return wet;
@@ -133,20 +136,22 @@ public final class RiverCarver {
                 }
             }
             if (ring < bankSmoothingRounds) {
-                current = dilate(current, H, W);
+                current = dilate(current, H, W, scale);
             }
         }
         return wet;
     }
 
-    /** 8-neighbour dilation of a boolean 2D mask. */
-    private static boolean[] dilate(boolean[] mask, int H, int W) {
+    /**
+     * 8-neighbour dilation of a boolean 2D mask by a radius in output pixels.
+     */
+    private static boolean[] dilate(boolean[] mask, int H, int W, int radius) {
         boolean[] out = new boolean[H * W];
         for (int r = 0; r < H; r++) {
             for (int c = 0; c < W; c++) {
                 if (!mask[r * W + c]) continue;
-                int r0 = Math.max(0, r - 1), r1 = Math.min(H - 1, r + 1);
-                int c0 = Math.max(0, c - 1), c1 = Math.min(W - 1, c + 1);
+                int r0 = Math.max(0, r - radius), r1 = Math.min(H - 1, r + radius);
+                int c0 = Math.max(0, c - radius), c1 = Math.min(W - 1, c + radius);
                 for (int nr = r0; nr <= r1; nr++) {
                     for (int nc = c0; nc <= c1; nc++) {
                         out[nr * W + nc] = true;

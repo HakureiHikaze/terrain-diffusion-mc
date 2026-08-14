@@ -1,14 +1,15 @@
 package com.github.xandergos.terraindiffusionmc.world;
 
+import com.github.xandergos.terraindiffusionmc.config.TerrainDiffusionConfig;
 import net.minecraft.server.level.ServerLevel;
 
 /**
  * Runtime access for world-scoped terrain scale.
  */
 public final class WorldScaleManager {
-    public static final int DEFAULT_SCALE = 2;
-    private static final int MIN_SCALE = 1;
-    public static final int MAX_SCALE = 6;
+    public static final int DEFAULT_SCALE = TerrainDiffusionConfig.DEFAULT_WORLD_SCALE;
+    private static final int MIN_SCALE = TerrainDiffusionConfig.MIN_WORLD_SCALE;
+    public static final int MAX_SCALE = TerrainDiffusionConfig.MAX_WORLD_SCALE;
 
     private static volatile int currentScale = DEFAULT_SCALE;
 
@@ -27,7 +28,7 @@ public final class WorldScaleManager {
 
         if (!worldScaleSettingsState.hasExplicitScale()) {
             Integer pendingScale = WorldScaleSelectionState.consumePendingScale();
-            int resolvedScale = pendingScale != null ? pendingScale : DEFAULT_SCALE;
+            int resolvedScale = pendingScale != null ? pendingScale : TerrainDiffusionConfig.worldScale();
             worldScaleSettingsState.setScale(resolvedScale);
         }
 

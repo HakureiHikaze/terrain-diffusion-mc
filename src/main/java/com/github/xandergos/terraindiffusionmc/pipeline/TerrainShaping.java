@@ -20,16 +20,22 @@ public final class TerrainShaping {
 
     private TerrainShaping() {}
 
-    public static void apply(float[] elev, int i0, int j0, int H, int W, float pixelSizeM) {
+    /**
+     * Applies ridge and plateau shaping in model-native pixel coordinates.
+     *
+     * @param nativePerBlock conversion from block coordinates to model-native pixels
+     *     ({@code pixelSizeM / nativeResolution}, i.e. 1 / worldScale)
+     */
+    public static void apply(float[] elev, int i0, int j0, int H, int W, float nativePerBlock) {
         if (TerrainDiffusionConfig.ridgesEnabled()) {
-            applyRidges(elev, i0, j0, H, W, pixelSizeM);
+            applyRidges(elev, i0, j0, H, W, nativePerBlock);
         }
         if (TerrainDiffusionConfig.plateausEnabled()) {
-            applyPlateaus(elev, i0, j0, H, W, pixelSizeM);
+            applyPlateaus(elev, i0, j0, H, W, nativePerBlock);
         }
     }
 
-    static void applyRidges(float[] elev, int i0, int j0, int H, int W, float pixelSizeM) {
+    static void applyRidges(float[] elev, int i0, int j0, int H, int W, float nativePerBlock) {
         float amp = TerrainDiffusionConfig.ridgeAmplitude();
         for (int r = 0; r < H; r++) {
             for (int c = 0; c < W; c++) {
@@ -38,13 +44,14 @@ public final class TerrainShaping {
                 if (e < 0f) continue;
 
                 float sf = Math.min(1f, Math.max(0f, e / 1500f));
-                float nx = j0 + c, ny = i0 + r;
+                float nx = (j0 + c) * nativePerBlock;
+                float ny = (i0 + r) * nativePerBlock;
                 elev[idx] = e + Math.abs(ELEV_NOISE_RIDGE.GetNoise(nx, ny)) * amp * sf;
             }
         }
     }
 
-    static void applyPlateaus(float[] elev, int i0, int j0, int H, int W, float pixelSizeM) {
+    static void applyPlateaus(float[] elev, int i0, int j0, int H, int W, float nativePerBlock) {
         float minBase = TerrainDiffusionConfig.plateauMin();
         float maxBase = TerrainDiffusionConfig.plateauMax();
         float compression = TerrainDiffusionConfig.plateauCompression();
@@ -57,7 +64,8 @@ public final class TerrainShaping {
                 float e = elev[idx];
                 if (e < 0f) continue;
 
-                float n = PLATEAU_NOISE.GetNoise(j0 + c, i0 + r);
+                float n = PLATEAU_NOISE.GetNoise(
+                        (j0 + c) * nativePerBlock, (i0 + r) * nativePerBlock);
                 float shift = n * variability;
                 float lo = minBase + shift;
                 float hi = maxBase + shift;

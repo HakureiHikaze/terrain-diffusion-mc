@@ -15,6 +15,8 @@ public final class WonderGenerator {
     private static final float[] KERNEL_R  = { 120f, 250f, 300f, 100f, 80f };
     private static final float   PILLAR_COUNT = 5;
     private static final float   GORGE_LENGTH = 300f;
+    /** Physical spacing between wonder candidate scans, in metres. */
+    static final float STEP_METERS = 720f;
 
     private static final short[][] BIOME_GATES = {
         { BiomeClassifier.TAIGA, BiomeClassifier.SNOWY_TAIGA, BiomeClassifier.TAIGA_SPARSE,
@@ -30,16 +32,17 @@ public final class WonderGenerator {
     private WonderGenerator() {}
 
     public static void apply(float[] elev, short[] biomes, int i0, int j0,
-                              int H, int W, float pixelSizeM, long seed) {
+                              int H, int W, float pixelSizeM, float nativePerBlock, long seed) {
         if (!TerrainDiffusionConfig.wondersEnabled()) return;
 
         for (int type = 0; type < 5; type++) {
-            applyType(elev, biomes, i0, j0, H, W, pixelSizeM, seed, type);
+            applyType(elev, biomes, i0, j0, H, W, pixelSizeM, nativePerBlock, seed, type);
         }
     }
 
     private static void applyType(float[] elev, short[] biomes, int i0, int j0,
-                                   int H, int W, float pixelSizeM, long seed, int type) {
+                                   int H, int W, float pixelSizeM, float nativePerBlock,
+                                   long seed, int type) {
         boolean needsRidge = (type == GORGE);
         boolean[] ridgeMask = null;
         if (needsRidge) ridgeMask = computeRidgeMask(elev, H, W);
@@ -50,7 +53,7 @@ public final class WonderGenerator {
         shapeNoise.SetNoiseType(FastNoiseLite.NoiseType.Perlin);
         shapeNoise.SetFrequency(0.05f);
 
-        int stepPx = Math.max(4, (int)(8f * 90f / pixelSizeM));
+        int stepPx = Math.max(4, (int)(STEP_METERS / pixelSizeM));
         float threshold = THRESHOLD[type];
 
         for (int r = 0; r < H; r += stepPx) {
@@ -64,7 +67,7 @@ public final class WonderGenerator {
                 if (!biomeGate(biomes[idx], type)) continue;
                 if (needsRidge && !ridgeMask[idx]) continue;
 
-                applyKernel(elev, biomes, r, c, H, W, type, shapeNoise, pixelSizeM);
+                applyKernel(elev, biomes, r, c, H, W, type, shapeNoise, pixelSizeM, nativePerBlock);
             }
         }
     }
@@ -88,8 +91,11 @@ public final class WonderGenerator {
     }
 
     private static void applyKernel(float[] elev, short[] biomes, int cr, int cc,
-                                     int H, int W, int type, FastNoiseLite shapeNoise, float pixelSizeM) {
+                                     int H, int W, int type, FastNoiseLite shapeNoise,
+                                     float pixelSizeM, float nativePerBlock) {
         float baseR = KERNEL_R[type] / pixelSizeM;
+        float nativeRow = cr * nativePerBlock;
+        float nativeCol = cc * nativePerBlock;
         int rPx = Math.max(1, Math.round(baseR));
         int r0 = Math.max(0, cr - rPx);
         int r1 = Math.min(H - 1, cr + rPx);
@@ -98,7 +104,7 @@ public final class WonderGenerator {
 
         switch (type) {
             case SPIRE: {
-                float h = 60f + shapeNoise.GetNoise(cr, cc) * 40f;
+                float h = 60f + shapeNoise.GetNoise(nativeRow, nativeCol) * 40f;
                 for (int r = r0; r <= r1; r++) {
                     for (int c = c0; c <= c1; c++) {
                         if (elev[r * W + c] < 0f) continue;
@@ -108,8 +114,9 @@ public final class WonderGenerator {
                 break;
             }
             case CALDERA: {
-                float depth = 25f + shapeNoise.GetNoise(cr, cc) * 15f;
-                float lipH  = 15f + Math.abs(shapeNoise.GetNoise(cr + 100, cc + 100)) * 20f;
+                float depth = 25f + shapeNoise.GetNoise(nativeRow, nativeCol) * 15f;
+                float lipH = 15f + Math.abs(
+                        shapeNoise.GetNoise(nativeRow + 100, nativeCol + 100)) * 20f;
                 for (int r = r0; r <= r1; r++) {
                     for (int c = c0; c <= c1; c++) {
                         if (elev[r * W + c] < 0f) continue;
@@ -119,7 +126,7 @@ public final class WonderGenerator {
                 break;
             }
             case MESA: {
-                float h = 40f + Math.abs(shapeNoise.GetNoise(cr, cc)) * 60f;
+                float h = 40f + Math.abs(shapeNoise.GetNoise(nativeRow, nativeCol)) * 60f;
                 for (int r = r0; r <= r1; r++) {
                     for (int c = c0; c <= c1; c++) {
                         if (elev[r * W + c] < 0f) continue;
@@ -130,12 +137,15 @@ public final class WonderGenerator {
             }
             case PILLARS: {
                 for (int p = 0; p < PILLAR_COUNT; p++) {
-                    float ox = (shapeNoise.GetNoise(cr + p * 7, cc) * 0.5f) * baseR;
-                    float oy = (shapeNoise.GetNoise(cr, cr + p * 7) * 0.5f) * baseR;
+                    float ox = (shapeNoise.GetNoise(nativeRow + p * 7, nativeCol) * 0.5f) * baseR;
+                    float oy = (shapeNoise.GetNoise(nativeRow, nativeRow + p * 7) * 0.5f) * baseR;
                     int pc = Math.round(cc + ox);
                     int pr = Math.round(cr + oy);
-                    float ph = 15f + Math.abs(shapeNoise.GetNoise(pr, pc)) * 25f;
-                    float prR = 3f + Math.abs(shapeNoise.GetNoise(pr + 10, pc + 10)) * 5f;
+                    float ph = 15f + Math.abs(shapeNoise.GetNoise(
+                            pr * nativePerBlock, pc * nativePerBlock)) * 25f;
+                    float pillarNoise = shapeNoise.GetNoise(
+                            pr * nativePerBlock + 10, pc * nativePerBlock + 10);
+                    float prR = pillarRadiusPixels(pillarNoise, nativePerBlock);
                     int ppr0 = Math.max(0, pr - (int)prR);
                     int ppr1 = Math.min(H - 1, pr + (int)prR);
                     int ppc0 = Math.max(0, pc - (int)prR);
@@ -150,14 +160,14 @@ public final class WonderGenerator {
                 break;
             }
             case GORGE: {
-                float depth = 30f + Math.abs(shapeNoise.GetNoise(cr, cc)) * 30f;
-                float dirX = shapeNoise.GetNoise(cr, cc + 50);
-                float dirY = shapeNoise.GetNoise(cr + 50, cc);
+                float depth = 30f + Math.abs(shapeNoise.GetNoise(nativeRow, nativeCol)) * 30f;
+                float dirX = shapeNoise.GetNoise(nativeRow, nativeCol + 50);
+                float dirY = shapeNoise.GetNoise(nativeRow + 50, nativeCol);
                 float len = (float)Math.sqrt(dirX * dirX + dirY * dirY);
                 if (len < 1e-6f) len = 1f;
                 dirX /= len; dirY /= len;
                 float halfLenPx = GORGE_LENGTH / 2f / pixelSizeM;
-                float widthPx = 5f;
+                float widthPx = gorgeWidthPixels(nativePerBlock);
                 for (int r = r0; r <= r1; r++) {
                     for (int c = c0; c <= c1; c++) {
                         if (elev[r * W + c] < 0f) continue;
@@ -173,6 +183,22 @@ public final class WonderGenerator {
                 break;
             }
         }
+    }
+
+    /**
+     * Gorge half-width in output pixels for the given block-to-native conversion.
+     * The physical width stays constant across world scales.
+     */
+    static float gorgeWidthPixels(float nativePerBlock) {
+        return 5f / nativePerBlock;
+    }
+
+    /**
+     * Pillar radius in output pixels for the given block-to-native conversion.
+     * The physical radius stays constant across world scales.
+     */
+    static float pillarRadiusPixels(float noise, float nativePerBlock) {
+        return (3f + Math.abs(noise) * 5f) / nativePerBlock;
     }
 
     static float coneKernel(int r, int c, int cr, int cc, float radius, float height) {
